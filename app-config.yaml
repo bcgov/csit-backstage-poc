@@ -6,6 +6,57 @@ organization:
   name: My Company
 
 backend:
+  reading:
+    allow:
+      # Allow BC Data Catalogue host access from backend
+      - host: catalogue.data.gov.bc.ca
+        scheme: https
+      - host: raw.githubusercontent.com
+        scheme: https
+      - host: services6.arcgis.com
+        scheme: https
+      - host: governmentofbc.maps.arcgis.com
+        scheme: https
+      - host: www2.gov.bc.ca
+        scheme: https
+      - host: openmaps.gov.bc.ca
+        scheme: https
+      - host: www.arcgis.com
+        scheme: https
+      - host: bcgov03.maps.arcgis.com
+        scheme: https
+      - host: bcparks.api.gov.bc.ca
+        scheme: https
+      - host: bcgov03.maps.arcgis.com
+        scheme: https
+      - host: apps.gov.bc.ca
+        scheme: https
+      - host: maps.gov.bc.ca
+        scheme: https
+      - host: experience.arcgis.com
+        scheme: https
+      - host: soil-relocation-information-system-governmentofbc.hub.arcgis.com
+        scheme: https
+      - host: survey123.arcgis.com
+        scheme: https
+      - host: www03.cmhc-schl.gc.ca
+        scheme: https 
+      - host: www.bclaws.ca
+        scheme: https 
+      - host: oas-editor.apps.gov.bc.ca"
+        scheme: https
+      - host: orgbook.gov.bc.ca
+        scheme: https 
+      - host: services1.arcgis.com
+        scheme: https 
+      - host: bcgov.github.io
+        scheme: https 
+      - host: jh-etk.api.gov.bc.ca
+        scheme: https 
+      - host: api.open511.gov.bc.ca
+        scheme: https
+      - host: oas-editor.apps.gov.bc.ca
+        scheme: https
   # Used for enabling authentication, secret is shared by all backend plugins
   # See https://backstage.io/docs/auth/service-to-service-auth for
   # information on the format
@@ -72,6 +123,9 @@ scaffolder:
   # see https://backstage.io/docs/features/software-templates/configuration for software template options
 
 catalog:
+  providers:
+    bc-data-catalogue-apis:
+      env: dev
   import:
     entityFilename: catalog-info.yaml
     pullRequestBranchName: backstage-integration
