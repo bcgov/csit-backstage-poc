@@ -268,9 +268,9 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
 
       pkg.resources?.forEach (resource => {
 
-        if (resource.bcdc_type == 'webservice' || resource.format == 'arcgis_rest' || resource.format == 'openapi-json' ) {
+        if (resource.bcdc_type == 'webservice' || resource.format == 'arcgis_rest' || resource.format == 'openapi-json'  ) {
 
-          // this.logger.info(`Found ${resource.bcdc_type} ${resource.format}`);
+          // this.logger.info(`Found ${resource.bcdc_type} ${resource.format} ${resource.name}`);
           apiResources.push(resource);
         } else if (resource.bcdc_type == 'geographic') {
 
@@ -324,6 +324,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
         },
         metadata: {
             name: safeName,
+            description: pkg.notes || 'No description available',
             annotations: {
               'backstage.io/managed-by-location': 'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search',
               'backstage.io/managed-by-origin-location': 'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search',
@@ -369,6 +370,18 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
       apiResources?.forEach (apiResource => {
 
         const name = apiResource.name;
+        let resourceSafeName = this.toSafeName(name);
+        let apiSafeName = resourceSafeName;
+
+        // For webservice resources with specific formats, prefix with format to ensure uniqueness
+        if (apiResource.bcdc_type === 'webservice' && 
+            (apiResource.format === 'kml' || apiResource.format === 'wms' || apiResource.format === 'arcgis_rest')) {
+          const formatSafeName = this.toSafeName(apiResource.format);
+          apiSafeName = this.toSafeName(`${formatSafeName}-${safeName}`);
+        } else if (apiResource.format === 'openapi-json') {
+          // For openapi-json resources, use 'api' prefix to ensure uniqueness
+          apiSafeName = this.toSafeName(`api-${safeName}`);
+        }
 
         const definition = apiResource.url;
         const url = new URL(definition);
@@ -379,18 +392,35 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
           this.logger.warn(`API definition host is NOT allowed: "${host}"`);
         }
 
+        const apiEntityLinks: EntityLink[] = [];
+
+        if (apiResource.url && apiResource.url.length > 0) {
+          const apiEntityLink: EntityLink = {
+            url: apiResource.url,
+            title: apiResource.name,
+            icon: 'api',
+            type: apiResource.bcdc_type,
+          };
+
+          apiEntityLinks.push(apiEntityLink);
+        }
+
         const apiEntity: ApiEntity = {
           apiVersion: 'backstage.io/v1alpha1',
           kind: 'API',
           spec: {
-            type: apiResource.bcdc_type,
+            type: apiResource.format === 'openapi-json' ? 'openapi' : apiResource.bcdc_type,
             lifecycle: 'production',
             owner: bcGovGroupId,
-            definition: `$text ${apiResource.url}`,
+            definition: (apiResource.format === 'openapi-json' ? '$json: ' : '$text: ') + apiResource.url,
             system: systemId
           },
           metadata: {
-            name: this.toSafeName(name),
+            name: apiSafeName,
+            description: apiResource.description || 'No description available',
+            links: apiEntityLinks,
+            // tags: [this.toSafeName(apiResource.format)],
+            tags: [this.toSafeName(apiResource.format)],
             annotations: {
               'backstage.io/managed-by-location': 'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search',
               'backstage.io/managed-by-origin-location': 'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search',
@@ -427,7 +457,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
           }
         };
 
-        const apiId = this.getApiId(name);
+        const apiId = this.getApiId(apiSafeName);
         allApis.set(apiId, apiEntity);
 
         componentEntity.spec.providesApis?.push(apiId);
