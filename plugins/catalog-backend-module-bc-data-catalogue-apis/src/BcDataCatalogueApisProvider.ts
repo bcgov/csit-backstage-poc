@@ -227,7 +227,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
     const allComponents = new Map<string, ComponentEntity>;
     const allApis = new Map<string, ApiEntity>;
 
-    allPackages.forEach(pkg => {
+    for (const pkg of allPackages) {
 
       const safeName = this.toSafeName(pkg.name);
 
@@ -367,7 +367,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
 
       allComponents.set(this.getComponentId(safeName), componentEntity);
 
-      apiResources?.forEach (apiResource => {
+      for (const apiResource of apiResources) {
 
         const name = apiResource.name;
         let resourceSafeName = this.toSafeName(name);
@@ -405,6 +405,21 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
           apiEntityLinks.push(apiEntityLink);
         }
 
+        // For openapi-json resources, fetch the content and embed it directly
+        let definitionContent: string = apiResource.url;
+        if (apiResource.format === 'openapi-json') {
+          try {
+            const response = await this.reader.readUrl(apiResource.url);
+            const content = (await response.buffer()).toString();
+            definitionContent = content;
+            this.logger.info(`Fetched OpenAPI definition for ${apiResource.name}`);
+          } catch (error) {
+            this.logger.warn(`Failed to fetch OpenAPI definition from ${apiResource.url}: ${error}`);
+            // Fall back to URL if fetch fails
+            definitionContent = apiResource.url;
+          }
+        }
+
         const apiEntity: ApiEntity = {
           apiVersion: 'backstage.io/v1alpha1',
           kind: 'API',
@@ -412,7 +427,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
             type: apiResource.format === 'openapi-json' ? 'openapi' : apiResource.bcdc_type,
             lifecycle: 'production',
             owner: bcGovGroupId,
-            definition: (apiResource.format === 'openapi-json' ? '$json: ' : '$text: ') + apiResource.url,
+            definition: definitionContent,
             system: systemId
           },
           metadata: {
@@ -461,8 +476,8 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
         allApis.set(apiId, apiEntity);
 
         componentEntity.spec.providesApis?.push(apiId);
-      });
-    });
+      }
+    }
 
     const userEntities: UserEntity[] = Array.from(allUsers.values());
     const groupEntities: GroupEntity[] = Array.from(allGroups.values());
