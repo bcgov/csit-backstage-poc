@@ -268,7 +268,10 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
 
       pkg.resources?.forEach (resource => {
 
-        if (resource.bcdc_type == 'webservice' || resource.format == 'arcgis_rest' || resource.format == 'openapi-json'  ) {
+        if (resource.bcdc_type == 'webservice' && resource.format != 'kml'
+           || resource.format == 'arcgis_rest' 
+           || resource.format == 'openapi-json' 
+           ) {
 
           // this.logger.info(`Found ${resource.bcdc_type} ${resource.format} ${resource.name}`);
           apiResources.push(resource);
@@ -373,14 +376,52 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
         let resourceSafeName = this.toSafeName(name);
         let apiSafeName = resourceSafeName;
 
-        // For webservice resources with specific formats, prefix with format to ensure uniqueness
-        if (apiResource.bcdc_type === 'webservice' && 
-            (apiResource.format === 'kml' || apiResource.format === 'wms' || apiResource.format === 'arcgis_rest')) {
-          const formatSafeName = this.toSafeName(apiResource.format);
-          apiSafeName = this.toSafeName(`${formatSafeName}-${safeName}`);
-        } else if (apiResource.format === 'openapi-json') {
-          // For openapi-json resources, use 'api' prefix to ensure uniqueness
-          apiSafeName = this.toSafeName(`api-${safeName}`);
+        // For all webservice resources, prefix with format to ensure uniqueness
+        if (apiResource.bcdc_type === 'webservice' || apiResource.format === 'arcgis_rest') {
+          // Use 'api' prefix for openapi-json, otherwise use the format as prefix
+          const prefix = apiResource.format === 'openapi-json' ? 'api' : apiResource.format;
+          const formatSafeName = this.toSafeName(prefix);
+          // Start with package name as base (most informative)
+          let baseName = this.toSafeName(`${formatSafeName}-${safeName}`);
+          
+          // Check if this would create a duplicate
+          let candidateName = baseName;
+          let candidateApiId = this.getApiId(candidateName);
+          
+          if (allApis.has(candidateApiId)) {
+            // Append distinguishing information from resource name to ensure uniqueness
+            const distinguishingSuffix = this.extractDistinguishingSuffix(name);
+            
+            // Calculate space needed: suffix + separator dash (max 63 chars total)
+            const suffixWithSeparator = `-${distinguishingSuffix}`;
+            const maxBaseLength = 63 - suffixWithSeparator.length;
+            
+            // Truncate baseName if needed to ensure suffix fits
+            let truncatedBase = baseName;
+            if (baseName.length > maxBaseLength) {
+              truncatedBase = baseName.slice(0, maxBaseLength).replace(/[-_.]+$/, '');
+            }
+            
+            candidateName = this.toSafeName(`${truncatedBase}${suffixWithSeparator}`);
+            candidateApiId = this.getApiId(candidateName);
+            
+            // If still a duplicate, append a counter to ensure uniqueness
+            let counter = 1;
+            while (allApis.has(candidateApiId)) {
+              // Reserve space for counter: suffix + counter + 2 dashes
+              const counterSuffix = `-${counter}`;
+              const maxBaseWithCounter = 63 - suffixWithSeparator.length - counterSuffix.length;
+              let truncatedBaseForCounter = baseName;
+              if (baseName.length > maxBaseWithCounter) {
+                truncatedBaseForCounter = baseName.slice(0, maxBaseWithCounter).replace(/[-_.]+$/, '');
+              }
+              candidateName = this.toSafeName(`${truncatedBaseForCounter}${suffixWithSeparator}${counterSuffix}`);
+              candidateApiId = this.getApiId(candidateName);
+              counter++;
+            }
+          }
+          
+          apiSafeName = candidateName;
         }
 
         const definition = apiResource.url;
@@ -412,7 +453,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
             const response = await this.reader.readUrl(apiResource.url);
             const content = (await response.buffer()).toString();
             definitionContent = content;
-            this.logger.info(`Fetched OpenAPI definition for ${apiResource.name}`);
+            // this.logger.info(`Fetched OpenAPI definition for ${apiResource.name}`);
           } catch (error) {
             this.logger.warn(`Failed to fetch OpenAPI definition from ${apiResource.url}: ${error}`);
             // Fall back to URL if fetch fails
@@ -473,6 +514,25 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
         };
 
         const apiId = this.getApiId(apiSafeName);
+
+        // Check for duplicate API names
+        if (allApis.has(apiId)) {
+          const existingApi = allApis.get(apiId)!;
+          this.logger.warn(
+            `Duplicate API name detected: "${apiSafeName}" (ID: ${apiId}). ` +
+            `Existing API: name="${existingApi.metadata.name}", ` +
+            `Format: "${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
+            `resource-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-id']}", ` +
+            `package-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-package_id']}", ` +
+            `url="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}". ` +
+            `New API: name="${apiEntity.metadata.name}", ` +
+            `resource-id="${apiResource.id}", ` +
+            `package-id="${apiResource.package_id}", ` +
+            `url="${apiResource.url}". ` +
+            `The new API will overwrite the existing one.`
+          );
+        }
+        
         allApis.set(apiId, apiEntity);
 
         componentEntity.spec.providesApis?.push(apiId);
@@ -606,6 +666,49 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
             .replace(/(?:^[-_.]+|[-_.]+$)/g, '')   // trim leading/trailing -_. 
             .slice(0, 63)                          // max 63 chars
             .replace(/[-_.]+$/, '');                // ensure it doesn't end with -_. if truncated
+  }
+
+  /**
+   * Extracts distinguishing information from a resource name to help make API names unique.
+   * Tries to extract meaningful parts like years, version numbers, or other identifiers.
+   */
+  private extractDistinguishingSuffix(resourceName: string): string {
+    const safeName = this.toSafeName(resourceName);
+    
+    // Try to extract year (4-digit number, likely 1900-2100)
+    const yearMatch = resourceName.match(/\b(19|20)\d{2}\b/);
+    if (yearMatch) {
+      return yearMatch[0];
+    }
+    
+    // Try to extract version-like patterns (v1, v2, version-1, etc.)
+    const versionMatch = resourceName.match(/\b(?:v|version)[\s_-]?(\d+)\b/i);
+    if (versionMatch) {
+      return `v${versionMatch[1]}`;
+    }
+    
+    // Try to extract any trailing numbers that might be identifiers
+    const trailingNumberMatch = resourceName.match(/\b(\d{2,})\b/);
+    if (trailingNumberMatch) {
+      return trailingNumberMatch[0];
+    }
+    
+    // If no clear distinguishing pattern, use a shortened version of the resource name
+    // Take the last meaningful words (avoiding common suffixes like "service", "request", etc.)
+    const words = safeName.split('-').filter(w => 
+      w.length > 0 && 
+      !['service', 'request', 'getcapabilities', 'wms', 'kml', 'arcgis', 'rest', 'online'].includes(w)
+    );
+    
+    // Use last 2-3 meaningful words if available, otherwise last 5 chars
+    if (words.length >= 2) {
+      return words.slice(-2).join('-');
+    } else if (words.length === 1) {
+      return words[0];
+    } else {
+      // Fallback: use last part of safe name (up to 10 chars)
+      return safeName.split('-').slice(-1)[0].slice(0, 10);
+    }
   }
 
 }
