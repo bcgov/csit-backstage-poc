@@ -49,3 +49,17 @@ const backend = createBackend();
 
 backend.start();
 ```
+
+### Configure backend reading allowlist
+
+Add the following configuration to your `app-config.yaml` to allow the backend to access the BC Data Catalogue API:
+
+```
+backend:
+reading:
+    allow:
+    - host: catalogue.data.gov.bc.ca
+        scheme: https
+```
+
+**Note:** Additional hosts may be required depending what resources are being loaded. See https://github.com/bcgov/csit-backstage-poc/blob/main/app-config.yaml for example.
