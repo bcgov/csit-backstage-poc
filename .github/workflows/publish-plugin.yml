@@ -67,6 +67,10 @@ jobs:
             echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           fi
 
+      - name: Build plugin
+        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
+        run: yarn build
+
       - name: Update package.json for publishing
         working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
         run: |
@@ -76,10 +80,6 @@ jobs:
           npm pkg set version="${{ steps.version.outputs.version }}"
           # Remove private flag for publishing
           npm pkg delete private
-
-      - name: Build plugin
-        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
-        run: yarn build
 
       - name: Publish to GitHub Packages
         working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
