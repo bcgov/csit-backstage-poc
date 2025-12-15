@@ -1,6 +1,6 @@
 /***/
 /**
- * The bc-data-catalogue-apis backend module for the catalog plugin.
+ * The bc-data-catalogue backend module for the catalog plugin.
  *
  * @packageDocumentation
  */

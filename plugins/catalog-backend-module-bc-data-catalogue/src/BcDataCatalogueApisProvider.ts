@@ -53,7 +53,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
 
   /** [2] */
   getProviderName(): string {
-    return `bc-data-catalogue-apis-${this.env}`;
+    return `bc-data-catalogue-${this.env}`;
   }
 
   /** [3] */
@@ -555,7 +555,7 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
       type: 'full',
       entities: allEntities.map(entity => ({
         entity,
-        locationKey: `bc-data-catalogue-provider:${this.env}`,
+        locationKey: `bc-data-catalogue:${this.env}`,
       })),
     });
 
