@@ -81,6 +81,8 @@ jobs:
           npm pkg set name="@bcgov/plugin-catalog-backend-module-bc-data-catalogue"
           # Update version
           npm pkg set version="${{ steps.version.outputs.version }}"
+          # Ensure pluginPackage is set
+          npm pkg set backstage.pluginPackage=true
           # Remove private flag for publishing
           npm pkg delete private
 
