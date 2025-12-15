@@ -124,7 +124,7 @@ scaffolder:
 
 catalog:
   providers:
-    bc-data-catalogue-apis:
+    bc-data-catalogue:
       env: dev
   import:
     entityFilename: catalog-info.yaml

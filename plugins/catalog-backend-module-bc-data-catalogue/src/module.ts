@@ -7,7 +7,7 @@ import { BcDataCatalogueApisProvider } from './BcDataCatalogueApisProvider';
 
 export const catalogModuleBcDataCatalogueApis = createBackendModule({
   pluginId: 'catalog',
-  moduleId: 'bc-data-catalogue-apis',
+  moduleId: 'bc-data-catalogue',
   register(reg) {
     reg.registerInit({
       deps: {

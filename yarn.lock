@@ -7090,9 +7090,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@internal/plugin-catalog-backend-module-bc-data-catalogue-apis@workspace:^, @internal/plugin-catalog-backend-module-bc-data-catalogue-apis@workspace:plugins/catalog-backend-module-bc-data-catalogue-apis":
+"@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:^, @internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue":
   version: 0.0.0-use.local
-  resolution: "@internal/plugin-catalog-backend-module-bc-data-catalogue-apis@workspace:plugins/catalog-backend-module-bc-data-catalogue-apis"
+  resolution: "@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue"
   dependencies:
     "@backstage/backend-plugin-api": "npm:^1.4.1"
     "@backstage/backend-test-utils": "npm:^1.7.0"
@@ -16670,7 +16670,7 @@ __metadata:
     "@backstage/plugin-search-backend-module-techdocs": "npm:^0.4.3"
     "@backstage/plugin-search-backend-node": "npm:^1.3.12"
     "@backstage/plugin-techdocs-backend": "npm:^2.0.3"
-    "@internal/plugin-catalog-backend-module-bc-data-catalogue-apis": "workspace:^"
+    "@internal/plugin-catalog-backend-module-bc-data-catalogue": "workspace:^"
     app: "link:../app"
     better-sqlite3: "npm:^9.0.0"
     node-gyp: "npm:^10.0.0"
