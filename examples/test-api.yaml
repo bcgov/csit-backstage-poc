@@ -1,0 +1,151 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: dog-api
+spec:
+  type: openapi
+  lifecycle: experimental
+  owner: guests
+  definition: |
+    openapi: 3.0.1
+    info:
+      title: API V2
+      version: 1.0.0
+      description: The Dog API provides a wealth of information on dog breeds, groups, and fun facts. Access and integrate this data into your website or application with our easy-to-use JSON API.
+      termsOfService: https://dogapi.dog/terms
+      contact:
+        email: dev@dogapi.dog
+      license:
+        name: MIT
+        url: https://github.com/kinduff/dogapi.dog/blob/master/LICENSE
+    servers:
+      - url: https://dogapi.dog/api/v2
+    paths:
+      /breeds:
+        get:
+          summary: list breeds
+          tags:
+            - Breeds
+          parameters:
+            - name: page[number]
+              in: query
+              required: false
+              schema:
+                type: integer
+                minimum: 1
+              description: Page number for pagination
+            - name: page[size]
+              in: query
+              required: false
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 1000
+              description: Number of records per page (max 1000)
+          responses:
+            '200':
+              description: successful
+              content:
+                application/json:
+                  examples:
+                    example:
+                      value:
+                        data: []
+      /breeds/{id}:
+        get:
+          summary: get breed with non-existing id
+          tags:
+            - Breeds
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+          responses:
+            '200':
+              description: successful
+              content:
+                application/json:
+                  examples:
+                    example:
+                      value:
+                        data: {}
+            '404':
+              description: not-found
+      /facts:
+        get:
+          summary: list facts
+          tags:
+            - Facts
+          parameters:
+            - name: limit
+              in: query
+              required: false
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 5
+                default: 1
+              description: Number of facts to return (max 5, defaults to 1)
+          responses:
+            '200':
+              description: successful
+              content:
+                application/json:
+                  examples:
+                    example:
+                      value:
+                        data: []
+      /groups:
+        get:
+          summary: list groups
+          tags:
+            - Groups
+          parameters:
+            - name: page[number]
+              in: query
+              required: false
+              schema:
+                type: integer
+                minimum: 1
+              description: Page number for pagination
+            - name: page[size]
+              in: query
+              required: false
+              schema:
+                type: integer
+                minimum: 1
+                maximum: 1000
+              description: Number of records per page (max 1000)
+          responses:
+            '200':
+              description: successful
+              content:
+                application/json:
+                  examples:
+                    example:
+                      value:
+                        data: []
+      /groups/{id}:
+        get:
+          summary: get group with non-existing id
+          tags:
+            - Groups
+          parameters:
+            - name: id
+              in: path
+              required: true
+              schema:
+                type: string
+          responses:
+            '200':
+              description: successful
+              content:
+                application/json:
+                  examples:
+                    example:
+                      value:
+                        data: {}
+            '404':
+              description: not-found

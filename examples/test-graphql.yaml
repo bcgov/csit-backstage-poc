@@ -1,0 +1,57 @@
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: countries-graphql
+spec:
+  type: graphql
+  lifecycle: experimental
+  owner: guests
+  definition: |
+    # GraphQL Schema for Countries API
+    schema {
+      query: Query
+    }
+    type Query {
+      countries(filter: CountryFilterInput): [Country!]!
+      country(code: ID!): Country
+      continents: [Continent!]!
+      continent(code: ID!): Continent
+      languages: [Language!]!
+      language(code: ID!): Language
+    }
+    input CountryFilterInput {
+      code: StringQueryOperatorInput
+      currency: StringQueryOperatorInput
+      continent: StringQueryOperatorInput
+    }
+    input StringQueryOperatorInput {
+      eq: String
+      ne: String
+      in: [String]
+      nin: [String]
+      regex: String
+      glob: String
+    }
+    type Country {
+      code: ID!
+      name: String!
+      native: String!
+      phone: String!
+      capital: String
+      currency: String
+      emoji: String!
+      emojiU: String!
+      continent: Continent!
+      languages: [Language!]!
+    }
+    type Continent {
+      code: ID!
+      name: String!
+      countries: [Country!]!
+    }
+    type Language {
+      code: ID!
+      name: String
+      native: String
+      rtl: Boolean!
+    }

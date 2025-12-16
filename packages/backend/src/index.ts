@@ -53,4 +53,5 @@ backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 backend.add(import('@backstage/plugin-kubernetes-backend'));
 
 backend.add(import('@internal/plugin-catalog-backend-module-bc-data-catalogue'));
+backend.add(import('@microcks/microcks-backstage-provider'));
 backend.start();

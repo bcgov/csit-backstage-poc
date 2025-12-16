@@ -126,6 +126,18 @@ catalog:
   providers:
     bc-data-catalogue:
       env: dev
+    microcksApiEntity:
+      dev:
+        baseUrl: http://localhost:8585
+        serviceAccount: guest
+        serviceAccountCredentials: guest
+        systemLabel: domain
+        ownerLabel: team
+        addLabels: false
+        addOpenAPIServerUrl: true
+        schedule:
+          frequency: { minutes: 2 }
+          timeout: { minutes: 1 }
   import:
     entityFilename: catalog-info.yaml
     pullRequestBranchName: backstage-integration
@@ -147,6 +159,14 @@ catalog:
       target: ../../examples/org.yaml
       rules:
         - allow: [User, Group]
+    
+    # Local example test API
+    - type: file
+      target: ../../examples/test-api.yaml
+
+    # Local example graphql API
+    - type: file
+      target: ../../examples/test-graphql.yaml
 
     ## Uncomment these lines to add more example data
     # - type: url
