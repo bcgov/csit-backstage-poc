@@ -35,6 +35,9 @@ import { AppRouter, FlatRoutes } from '@backstage/core-app-api';
 import { CatalogGraphPage } from '@backstage/plugin-catalog-graph';
 import { RequirePermission } from '@backstage/plugin-permission-react';
 import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/alpha';
+import { UnifiedThemeProvider } from '@backstage/theme';
+import { bcDesignSystemTheme } from './theme';
+import { TestBcdsPage } from '@internal/plugin-test-bcds';
 
 const app = createApp({
   apis,
@@ -58,6 +61,17 @@ const app = createApp({
   components: {
     SignInPage: props => <SignInPage {...props} auto providers={['guest']} />,
   },
+  themes: [
+    {
+      id: 'bc-design-system-theme',
+      title: 'BC Design System',
+      variant: 'light',
+      Provider: ({ children }) => (
+        <UnifiedThemeProvider theme={bcDesignSystemTheme}>{children}</UnifiedThemeProvider>
+      ),
+    },
+  ]
+
 });
 
 const routes = (
