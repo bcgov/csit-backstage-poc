@@ -39,6 +39,7 @@ export const bcDesignSystemTheme = createUnifiedTheme({
       },
     },
   }),
+  fontFamily: tokens.typographyFontFamiliesBcSans,
   pageTheme: {
     home: genPageTheme({
       colors: [tokens.surfaceColorBackgroundWhite],
