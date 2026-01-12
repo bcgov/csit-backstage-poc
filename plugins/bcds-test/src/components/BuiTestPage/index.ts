@@ -1,0 +1,2 @@
+export { BuiTestPage } from './BuiTestPage';
+

@@ -1,0 +1,75 @@
+@import '@bcgov/design-tokens/css/variables.css';
+
+:root {
+    /* Use :root to set styles for both light and dark themes */
+  }
+  
+[data-theme-mode='devex'] {
+/* styles exported using @backstage/plugin-mui-to-bui*/
+--bui-font-regular: "BCSans", "Noto Sans", "Roboto", sans-serif;
+--bui-font-weight-regular: 400;
+--bui-font-weight-bold: 700;
+--bui-black: #000;
+--bui-white: #fff;
+--bui-fg-primary: rgba(0, 0, 0, 0.87);
+--bui-fg-secondary: undefined;
+--bui-fg-link: #1976d2;
+--bui-fg-link-hover: #1565c0;
+--bui-fg-disabled: rgba(0, 0, 0, 0.38);
+--bui-fg-solid: #fff;
+--bui-fg-solid-disabled: rgba(0, 0, 0, 0.38);
+--bui-fg-tint: undefined;
+--bui-fg-tint-disabled: rgba(0, 0, 0, 0.12);
+--bui-fg-danger: #c62828;
+--bui-fg-warning: #e65100;
+--bui-fg-success: #1b5e20;
+--bui-bg: #fff;
+--bui-bg-surface-1: #fff;
+--bui-bg-surface-2: #fff;
+--bui-bg-solid: #1976d2;
+--bui-bg-solid-hover: rgb(23, 110, 201);
+--bui-bg-solid-pressed: #1565c0;
+--bui-bg-solid-disabled: rgba(0, 0, 0, 0.12);
+--bui-bg-tint: transparent;
+--bui-bg-tint-hover: rgba(25, 118, 210, 0.4);
+--bui-bg-tint-pressed: rgba(25, 118, 210, 0.6);
+--bui-bg-tint-disabled: rgba(0, 0, 0, 0.12);
+--bui-bg-danger: #ef5350;
+--bui-bg-warning: #ff9800;
+--bui-bg-success: #4caf50;
+--bui-border-danger: #d32f2f;
+--bui-border-warning: #ed6c02;
+--bui-border-success: #2e7d32;
+--bui-border: rgba(0, 0, 0, 0.12);
+--bui-ring: #1976d2;
+/* more styles added here */
+
+.bui-Button[data-variant="primary"] {
+    background-color: #013366;
+    color: #fff;
+}
+
+.bui-ButtonLink {
+  border-radius: 8px;
+  background-color: #013366;
+  color: #fff;
+}
+
+.bui-TextField[data-disabled="true"] input {
+  background-color: var(--surface-color-forms-disabled);
+}
+
+.bui-FieldLabel {
+    font-size: 0.875rem;
+}
+
+/* Make Material-UI InputLabel match BUI FieldLabel */
+.MuiInputLabel-root,
+.MuiInputLabel-root.MuiInputLabel-shrink,
+.MuiInputLabel-root.Mui-disabled {
+  font-size: 0.875rem !important;
+  font-weight: 400 !important;
+  line-height: 1.5 !important;
+}
+}
+

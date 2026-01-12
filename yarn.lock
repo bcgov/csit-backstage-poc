@@ -5020,6 +5020,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@backstage/plugin-mui-to-bui@npm:^0.2.2":
+  version: 0.2.2
+  resolution: "@backstage/plugin-mui-to-bui@npm:0.2.2"
+  dependencies:
+    "@backstage/core-plugin-api": "npm:^1.12.1"
+    "@backstage/frontend-plugin-api": "npm:^0.13.2"
+    "@backstage/theme": "npm:^0.7.1"
+    "@backstage/ui": "npm:^0.10.0"
+    "@mui/material": "npm:^5.12.2"
+    "@mui/system": "npm:^5.16.14"
+  peerDependencies:
+    "@types/react": ^17.0.0 || ^18.0.0
+    react: ^17.0.0 || ^18.0.0
+    react-dom: ^17.0.0 || ^18.0.0
+    react-router-dom: ^6.3.0
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+  checksum: 10c0/7b36a072537673b142182ef2b76191fa63a4a77b613b0ad7c127278ad7ddfba9693ad98cee2c1d003e6b6373a79191f2cc8ce9e18c0fab821ce3751538992b57
+  languageName: node
+  linkType: hard
+
 "@backstage/plugin-org@npm:^0.6.40":
   version: 0.6.46
   resolution: "@backstage/plugin-org@npm:0.6.46"
@@ -6168,7 +6190,32 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bcgov/design-tokens@npm:^3.2.0":
+"@bcgov/bc-sans@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "@bcgov/bc-sans@npm:2.1.0"
+  checksum: 10c0/47c0851770203e5304fd0fce6ea42fde4cc7e594a0935720f191efd99412e50e8b64d0726a9f52ae6c05972fb943f353528a385cd0ae1ee492f599cc22034133
+  languageName: node
+  linkType: hard
+
+"@bcgov/design-system-react-components@npm:^0.5.2":
+  version: 0.5.2
+  resolution: "@bcgov/design-system-react-components@npm:0.5.2"
+  dependencies:
+    "@bcgov/design-tokens": "npm:3.2.0"
+    "@rollup/rollup-linux-x64-gnu": "npm:*"
+    react-aria-components: "npm:1.13.0"
+  peerDependencies:
+    "@bcgov/bc-sans": ^2.1.0
+    react: ^16.14.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0
+    react-dom: ^16.14.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0
+  dependenciesMeta:
+    "@rollup/rollup-linux-x64-gnu":
+      optional: true
+  checksum: 10c0/8c1d0fb3b96dfcada03b2d978f7ce7d41b2bc12b3bf874994272c1f2d7bd0166e5c2495fac210d8ae9e92c7e4c03cbb524788d292df176368dc0d99e66d5ae28
+  languageName: node
+  linkType: hard
+
+"@bcgov/design-tokens@npm:3.2.0, @bcgov/design-tokens@npm:^3.2.0":
   version: 3.2.0
   resolution: "@bcgov/design-tokens@npm:3.2.0"
   checksum: 10c0/da3b1f71d57f6eb3991b7c252519b70d7b47b2734af7a381cdf4c536eeced1dde75ab46dc6e115d2e39aaac0ddfbc5032f8187e0f24ba916540d743beffc3894
@@ -7571,19 +7618,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:^, @internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue":
+"@internal/plugin-bcds-test@workspace:^, @internal/plugin-bcds-test@workspace:plugins/bcds-test":
   version: 0.0.0-use.local
-  resolution: "@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue"
-  dependencies:
-    "@backstage/backend-plugin-api": "npm:^1.4.1"
-    "@backstage/backend-test-utils": "npm:^1.7.0"
-    "@backstage/cli": "npm:^0.33.0"
-  languageName: unknown
-  linkType: soft
-
-"@internal/plugin-test-bcds@workspace:^, @internal/plugin-test-bcds@workspace:plugins/test-bcds":
-  version: 0.0.0-use.local
-  resolution: "@internal/plugin-test-bcds@workspace:plugins/test-bcds"
+  resolution: "@internal/plugin-bcds-test@workspace:plugins/bcds-test"
   dependencies:
     "@backstage/cli": "npm:^0.33.0"
     "@backstage/core-app-api": "npm:^1.17.1"
@@ -7603,6 +7640,16 @@ __metadata:
     react-use: "npm:^17.2.4"
   peerDependencies:
     react: ^16.13.1 || ^17.0.0 || ^18.0.0
+  languageName: unknown
+  linkType: soft
+
+"@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:^, @internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue":
+  version: 0.0.0-use.local
+  resolution: "@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue"
+  dependencies:
+    "@backstage/backend-plugin-api": "npm:^1.4.1"
+    "@backstage/backend-test-utils": "npm:^1.7.0"
+    "@backstage/cli": "npm:^0.33.0"
   languageName: unknown
   linkType: soft
 
@@ -9056,7 +9103,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mui/system@npm:^5.18.0":
+"@mui/system@npm:^5.16.14, @mui/system@npm:^5.18.0":
   version: 5.18.0
   resolution: "@mui/system@npm:5.18.0"
   dependencies:
@@ -13939,6 +13986,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rollup/rollup-linux-x64-gnu@npm:*":
+  version: 4.55.1
+  resolution: "@rollup/rollup-linux-x64-gnu@npm:4.55.1"
+  conditions: os=linux & cpu=x64 & libc=glibc
+  languageName: node
+  linkType: hard
+
 "@rollup/rollup-linux-x64-gnu@npm:4.53.3":
   version: 4.53.3
   resolution: "@rollup/rollup-linux-x64-gnu@npm:4.53.3"
@@ -17959,7 +18013,7 @@ __metadata:
     "@backstage/plugin-user-settings": "npm:^0.8.23"
     "@backstage/test-utils": "npm:^1.7.9"
     "@backstage/theme": "npm:^0.6.6"
-    "@internal/plugin-test-bcds": "workspace:^"
+    "@internal/plugin-bcds-test": "workspace:^"
     "@material-ui/core": "npm:^4.12.2"
     "@material-ui/icons": "npm:^4.9.1"
     "@playwright/test": "npm:^1.32.3"
@@ -31890,7 +31944,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-aria-components@npm:^1.10.1":
+"react-aria-components@npm:1.13.0, react-aria-components@npm:^1.10.1":
   version: 1.13.0
   resolution: "react-aria-components@npm:1.13.0"
   dependencies:
@@ -33522,6 +33576,9 @@ __metadata:
   dependencies:
     "@backstage/cli": "npm:^0.33.0"
     "@backstage/e2e-test-utils": "npm:^0.1.1"
+    "@backstage/plugin-mui-to-bui": "npm:^0.2.2"
+    "@bcgov/bc-sans": "npm:^2.1.0"
+    "@bcgov/design-system-react-components": "npm:^0.5.2"
     "@bcgov/design-tokens": "npm:^3.2.0"
     "@playwright/test": "npm:^1.32.3"
     node-gyp: "npm:^10.0.0"

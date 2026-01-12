@@ -1,0 +1,10 @@
+/* Styles for BC Gov design-system-react-components TextField */
+
+.styledTextField .bcds-react-aria-TextField--Input,
+.styledTextField input.bcds-react-aria-TextField--Input,
+div.styledTextField .bcds-react-aria-TextField--Input,
+div.styledTextField input.bcds-react-aria-TextField--Input,
+.styledTextField input[class*="bcds-react-aria-TextField"],
+.styledTextField input[class*="TextField--Input"] {
+  color: #0066cc !important;
+}

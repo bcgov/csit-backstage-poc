@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigate, Route } from 'react-router-dom';
 import { apiDocsPlugin, ApiExplorerPage } from '@backstage/plugin-api-docs';
 import {
@@ -37,7 +38,14 @@ import { RequirePermission } from '@backstage/plugin-permission-react';
 import { catalogEntityCreatePermission } from '@backstage/plugin-catalog-common/alpha';
 import { UnifiedThemeProvider } from '@backstage/theme';
 import { bcDesignSystemTheme } from './theme';
-import { TestBcdsPage } from '@internal/plugin-test-bcds';
+import { BcdsTestPage, BuiTestPage } from '@internal/plugin-bcds-test';
+
+import { ThemeProvider, CssBaseline } from '@material-ui/core';
+import { devExTheme } from './devex-theme';
+import { themes } from '@backstage/theme';
+import './bui-styles.css';
+
+import { BuiThemerPage } from '@backstage/plugin-mui-to-bui';
 
 const app = createApp({
   apis,
@@ -66,10 +74,52 @@ const app = createApp({
       id: 'bc-design-system-theme',
       title: 'BC Design System',
       variant: 'light',
+      Provider: ({ children }) => {
+        React.useEffect(() => {
+          document.documentElement.setAttribute('data-theme-mode', 'bc-design-system-theme');
+          return () => {
+            document.documentElement.removeAttribute('data-theme-mode');
+          };
+        }, []);
+        return (
+          <UnifiedThemeProvider theme={bcDesignSystemTheme} children={children} />
+        );
+      },
+    },
+    {
+      id: 'devex',
+      title: 'DevEx Theme',
+      variant: 'light',
+      Provider: ({ children }) => {
+        React.useEffect(() => {
+          document.documentElement.setAttribute('data-theme-mode', 'devex');
+          return () => {
+            document.documentElement.removeAttribute('data-theme-mode');
+          };
+        }, []);
+        return (
+        <ThemeProvider theme={devExTheme}>
+          <CssBaseline>{children}</CssBaseline>
+        </ThemeProvider>
+        );
+      },
+    },
+    {
+      id: 'light',
+      title: 'Light theme',
+      variant: 'light',
       Provider: ({ children }) => (
-        <UnifiedThemeProvider theme={bcDesignSystemTheme}>{children}</UnifiedThemeProvider>
+        <UnifiedThemeProvider theme={themes.light} children={children} />
       ),
     },
+    {
+      id: 'dark',
+      title: 'Dark theme',
+      variant: 'dark',
+      Provider: ({ children }) => (
+        <UnifiedThemeProvider theme={themes.dark} children={children} />
+      ),
+    }
   ]
 
 });
@@ -108,6 +158,9 @@ const routes = (
     </Route>
     <Route path="/settings" element={<UserSettingsPage />} />
     <Route path="/catalog-graph" element={<CatalogGraphPage />} />
+    <Route path="/bcds-test" element={<BcdsTestPage />} />
+    <Route path="/bui-test" element={<BuiTestPage />} />
+    <Route path="/bui-themer" element={<BuiThemerPage />} />
   </FlatRoutes>
 );
 
