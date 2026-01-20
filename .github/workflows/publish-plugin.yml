@@ -86,7 +86,7 @@ jobs:
           # Remove private flag for publishing
           npm pkg delete private
 
-      - name: Publish to GitHub Packages
+      - name: Publish to npm
         working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
         run: |
           npm publish --access public
