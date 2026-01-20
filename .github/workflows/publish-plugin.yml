@@ -25,7 +25,9 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          scope: '@bcgov'
+
+      - name: Upgrade npm (OIDC support requires modern npm)
+        run: npm install -g npm@latest
 
       - name: Get short commit SHA
         id: commit
@@ -85,6 +87,10 @@ jobs:
           npm pkg set backstage.pluginPackage=true
           # Remove private flag for publishing
           npm pkg delete private
+
+      # Ensure we don't accidentally fall back to token auth
+      - name: Clear legacy npm tokens
+        run: echo "NODE_AUTH_TOKEN=" >> $GITHUB_ENV
 
       - name: Publish to npm
         working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
