@@ -11,8 +11,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
+      id-token: write # Required for OIDC -- https://docs.npmjs.com/trusted-publishers
+      contents: read
     
     steps:
       - name: Checkout code
@@ -24,7 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
+          registry-url: 'https://registry.npmjs.org'
           scope: '@bcgov'
 
       - name: Get short commit SHA
@@ -88,8 +88,6 @@ jobs:
 
       - name: Publish to GitHub Packages
         working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm publish --access public
 
