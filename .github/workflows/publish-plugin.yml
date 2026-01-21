@@ -89,6 +89,9 @@ jobs:
           npm pkg set backstage.pluginPackage=true
           # Remove private flag for publishing
           npm pkg delete private
+          # Point entry points to built artifacts
+          npm pkg set main="dist/index.cjs.js"
+          npm pkg set types="dist/index.d.ts"
 
       # Ensure we don't accidentally fall back to token auth
       - name: Clear legacy npm tokens
