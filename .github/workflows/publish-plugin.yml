@@ -92,6 +92,15 @@ jobs:
           # Point entry points to built artifacts
           npm pkg set main="dist/index.cjs.js"
           npm pkg set types="dist/index.d.ts"
+          # --- Provenance: repository must match provenance source URL exactly ---
+          # Use the canonical HTTPS URL with NO "git+" prefix and NO ".git" suffix,
+          # because the provenance from GitHub OIDC will look like:
+          #   https://github.com/bcgov/csit-backstage-poc
+          npm pkg set repository.type="git"
+          npm pkg set repository.url="https://github.com/bcgov/csit-backstage-poc"
+          # Since this is a monorepo package, set the subdirectory path, too:
+          npm pkg set repository.directory="plugins/catalog-backend-module-bc-data-catalogue"
+
 
       # Ensure we don't accidentally fall back to token auth
       - name: Clear legacy npm tokens
