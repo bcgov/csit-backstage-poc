@@ -111,3 +111,9 @@ jobs:
         run: |
           npm publish --access public --tag "${{ steps.version.outputs.tag }}"
 
+      - name: Set latest tag on npm for main branch
+        if: steps.version.outputs.strategy == 'main'
+        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
+        run: |
+          PACKAGE_NAME=$(npm pkg get name | tr -d '"')
+          npm dist-tag add "$PACKAGE_NAME@${{ steps.version.outputs.version }}" latest
