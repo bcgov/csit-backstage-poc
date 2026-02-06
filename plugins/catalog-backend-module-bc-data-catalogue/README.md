@@ -27,7 +27,21 @@ This package is published to GitHub Packages and requires authentication to inst
     @bcgov:registry=https://npm.pkg.github.com
     //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
     ```
-    **Note**: The `.npmrc` file uses environment variable substitution, so your token is stored in your environment, not in the file. This makes it safe to commit `.npmrc` to your repository.
+
+4. Depending on yarn version, you may also need to add to `.yarnrc.yaml`:
+
+    ```
+    npmScopes:
+    bcgov:
+        npmRegistryServer: "https://npm.pkg.github.com"
+
+    npmRegistries:
+    "https://npm.pkg.github.com":
+        npmAuthToken: "${GITHUB_TOKEN}"
+
+    ```
+
+**Note**: The these files uses environment variable substitution, so your token is stored in your environment, not in the file.
 
 ### Install the Package
 
