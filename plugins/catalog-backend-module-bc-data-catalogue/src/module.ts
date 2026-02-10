@@ -3,6 +3,7 @@ import {
   createBackendModule,
 } from '@backstage/backend-plugin-api';
 import { catalogProcessingExtensionPoint } from '@backstage/plugin-catalog-node/alpha';
+import { readDurationFromConfig } from '@backstage/config';
 import { BcDataCatalogueApisProvider } from './BcDataCatalogueApisProvider';
 
 export const catalogModuleBcDataCatalogueApis = createBackendModule({
@@ -25,9 +26,14 @@ export const catalogModuleBcDataCatalogueApis = createBackendModule({
 
         const allowedHosts = config.getConfigArray('backend.reading.allow').map(entry => entry.getString('host')).map(h => h.toLowerCase());
 
+        // Parse feed frequency from config or use default
+        const frequency = config.has('catalog.providers.bc-data-catalogue.schedule.frequency')
+          ? readDurationFromConfig(config.getConfig('catalog.providers.bc-data-catalogue.schedule'), { key: 'frequency' })
+          : { minutes: 60 };
+
         // Create a task runner with your schedule
         const taskRunner = scheduler.createScheduledTaskRunner({
-          frequency: { minutes: 1 },
+          frequency,
           timeout: { seconds: 45 },
         });
         

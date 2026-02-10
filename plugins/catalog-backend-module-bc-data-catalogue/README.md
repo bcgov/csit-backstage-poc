@@ -27,7 +27,21 @@ This package is published to GitHub Packages and requires authentication to inst
     @bcgov:registry=https://npm.pkg.github.com
     //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
     ```
-    **Note**: The `.npmrc` file uses environment variable substitution, so your token is stored in your environment, not in the file. This makes it safe to commit `.npmrc` to your repository.
+
+4. Depending on yarn version, you may also need to add to `.yarnrc.yaml`:
+
+    ```yaml
+    npmScopes:
+    bcgov:
+        npmRegistryServer: "https://npm.pkg.github.com"
+
+    npmRegistries:
+    "https://npm.pkg.github.com":
+        npmAuthToken: "${GITHUB_TOKEN}"
+
+    ```
+
+**Note**: The these files uses environment variable substitution, so your token is stored in your environment, not in the file.
 
 ### Install the Package
 
@@ -50,11 +64,13 @@ const backend = createBackend();
 backend.start();
 ```
 
+## Configuration
+
 ### Configure backend reading allowlist
 
 Add the following configuration to your `app-config.yaml` to allow the backend to access the BC Data Catalogue API:
 
-```
+```yaml
 backend:
 reading:
     allow:
@@ -63,3 +79,16 @@ reading:
 ```
 
 **Note:** Additional hosts may be required depending what resources are being loaded. See https://github.com/bcgov/csit-backstage-poc/blob/main/app-config.yaml for example.
+
+### Fetch frequency
+
+Add the following configuration to your `app-config.yaml` to set the fetch frequency:
+
+```yaml
+catalog:
+  providers:
+    bc-data-catalogue:
+      env: dev
+      schedule: 
+        frequency: 10m
+```
