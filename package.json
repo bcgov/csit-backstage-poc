@@ -1,9 +1,14 @@
 {
   "name": "root",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "engines": {
     "node": "20 || 22"
+  },
+  "backstage": {
+    "pluginPackages": [
+      "@bcgov/plugin-catalog-backend-module-bc-data-catalogue"
+    ]
   },
   "scripts": {
     "start": "backstage-cli repo start",
