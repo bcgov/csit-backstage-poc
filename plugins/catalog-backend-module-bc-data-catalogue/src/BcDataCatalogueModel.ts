@@ -85,6 +85,7 @@ const BcResourceSchema = z.object({
   hash: z.string(),
   id: z.string(),
   iso_topic_category: z.array(z.string()).optional(),
+  json_table_schema: z.record(z.unknown()).nullable().optional(),
   metadata_modified: z.string(),
   mimetype: z.string().nullable(),
   name: z.string(),
