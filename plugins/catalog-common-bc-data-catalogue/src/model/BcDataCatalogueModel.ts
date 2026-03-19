@@ -38,7 +38,7 @@ const BcOrganizationSchema = z.object({
   id: z.string(),
   name: z.string(),
   title: z.string(),
-  type: z.string(),   
+  type: z.string(),
   description: z.string(),
   image_url: z.string(),
   created: z.string(), // ISO date string
@@ -62,9 +62,17 @@ const BcResourceDetailsSchema = z.object({
   short_name: z.string().optional(),
 });
 
+export type DatasetSchemaField = {
+  name: string;
+  type?: string;
+  format?: string;
+  required?: boolean;
+};
+
 const BcResourcePreviewInfoSchema = z.object({
   layer_name: z.string().optional(),
   name: z.string().optional(),
+  preview_image_url: z.string().optional(),
   preview_latitude: z.string().optional(),
   preview_longitude: z.string().optional(),
   preview_zoom_level: z.string().optional(),
@@ -86,9 +94,14 @@ const BcResourceSchema = z.object({
   id: z.string(),
   iso_topic_category: z.array(z.string()).optional(),
   json_table_schema: z.record(z.unknown()).nullable().optional(),
+  last_modified: z.string().optional(),
   metadata_modified: z.string(),
   mimetype: z.string().nullable(),
+  mimetype_inner: z.string().nullable().optional(),
   name: z.string(),
+  object_name: z.string().optional(),
+  object_short_name: z.string().optional(),
+  object_table_comments: z.string().optional(),
   package_id: z.string(),
   position: z.number(),
   preview_info: z.array(BcResourcePreviewInfoSchema).optional(),
@@ -100,6 +113,7 @@ const BcResourceSchema = z.object({
   size: z.number().nullable(),
   spatial_datatype: z.string().optional(),
   state: z.string(),
+  supplemental_info: z.string().optional(),
   url: z.string(),
   url_type: z.string().nullable(),
 });
@@ -131,6 +145,7 @@ export const BcDataCataloguePackageSchema = z.object({
   owner_org: z.string(),
   private: z.boolean().nullable(),
   publish_state: z.string(),
+  purpose: z.string().nullable().optional(),
   record_create_date: z.string().optional(),
   record_last_modified: z.string(),
   record_publish_date: z.string(),
@@ -145,10 +160,12 @@ export const BcDataCataloguePackageSchema = z.object({
 
   // Arrays
   contacts: z.array(BcContactSchema),
-  dates: z.array(z.object({
-    date: z.string(),
-    type: z.string(),
-  })),
+  dates: z.array(
+    z.object({
+      date: z.string(),
+      type: z.string(),
+    }),
+  ),
   groups: z.array(BcGroupSchema),
   more_info: z.array(BcMoreInfoSchema).nullable().optional(),
   resources: z.array(BcResourceSchema).nullable(),

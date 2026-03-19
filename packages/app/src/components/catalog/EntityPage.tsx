@@ -57,6 +57,7 @@ import {
   EntityKubernetesContent,
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
+import { CatalogDatasetPage } from '@bcgov/plugin-catalog-dataset';
 
 const techdocsContent = (
   <EntityTechdocsContent>
@@ -404,6 +405,7 @@ export const entityPage = (
     <EntitySwitch.Case if={isKind('user')} children={userPage} />
     <EntitySwitch.Case if={isKind('system')} children={systemPage} />
     <EntitySwitch.Case if={isKind('domain')} children={domainPage} />
+    <EntitySwitch.Case if={isKind('dataset')} children={<CatalogDatasetPage />} />
 
     <EntitySwitch.Case>{defaultEntityPage}</EntitySwitch.Case>
   </EntitySwitch>

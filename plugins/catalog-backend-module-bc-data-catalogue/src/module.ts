@@ -5,6 +5,7 @@ import {
 import { catalogProcessingExtensionPoint } from '@backstage/plugin-catalog-node/alpha';
 import { readDurationFromConfig } from '@backstage/config';
 import { BcDataCatalogueApisProvider } from './BcDataCatalogueApisProvider';
+import { BcDataCatalogueDatasetProcessor } from './BcDataCatalogueDatasetProcessor';
 
 export const catalogModuleBcDataCatalogueApis = createBackendModule({
   pluginId: 'catalog',
@@ -46,6 +47,8 @@ export const catalogModuleBcDataCatalogueApis = createBackendModule({
           logger,
         );
 
+        // Register the processor
+        catalog.addProcessor(new BcDataCatalogueDatasetProcessor());
         // Register the provider
         catalog.addEntityProvider(provider);
 

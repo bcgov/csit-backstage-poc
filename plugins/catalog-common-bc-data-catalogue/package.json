@@ -1,23 +1,26 @@
 {
-  "name": "@bcgov/plugin-catalog-backend-module-bc-data-catalogue",
+  "name": "@bcgov/plugin-catalog-common-bc-data-catalogue",
   "version": "0.0.0",
   "license": "Apache-2.0",
   "private": true,
-  "description": "The bc-data-catalogue backend module for the catalog plugin.",
+  "description": "Common functionalities for the catalog-common-bc-data-catalogue plugin",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "publishConfig": {
     "access": "public",
     "main": "dist/index.cjs.js",
+    "module": "dist/index.esm.js",
     "types": "dist/index.d.ts"
   },
   "backstage": {
-    "role": "backend-plugin-module",
-    "pluginId": "catalog",
-    "pluginPackage": "@bcgov/plugin-catalog-backend-module-bc-data-catalogue"
+    "role": "common-library",
+    "pluginId": "catalog-common-bc-data-catalogue",
+    "pluginPackages": [
+      "@bcgov/plugin-catalog-common-bc-data-catalogue"
+    ]
   },
+  "sideEffects": false,
   "scripts": {
-    "start": "backstage-cli package start",
     "build": "backstage-cli package build",
     "lint": "backstage-cli package lint",
     "test": "backstage-cli package test",
@@ -25,13 +28,7 @@
     "prepack": "backstage-cli package prepack",
     "postpack": "backstage-cli package postpack"
   },
-  "dependencies": {
-    "@backstage/backend-plugin-api": "^1.4.1",
-    "@backstage/config": "^1.3.2",
-    "@bcgov/plugin-catalog-common-bc-data-catalogue": "*"
-  },
   "devDependencies": {
-    "@backstage/backend-test-utils": "^1.7.0",
     "@backstage/cli": "^0.33.0"
   },
   "files": [
