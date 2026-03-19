@@ -1,10 +1,10 @@
-name: Publish Plugin
+name: Publish Plugins
 
 on:
   push:
     branches:
-      - 'main'
-      - 'feature/**'
+      - main
+      - feature/**
   workflow_dispatch:
 
 jobs:
@@ -13,83 +13,17 @@ jobs:
     permissions:
       contents: write
       packages: write
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Publish Backstage plugins
+        id: publish_plugins
+        uses: bcgov/aps-devops/publish-backstage-plugins@dev
         with:
-          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@bcgov'
-
-      - name: Get short commit SHA
-        id: commit
-        run: echo "sha8=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
-
-      - name: Setup Yarn
-        run: corepack enable && corepack prepare yarn@4.4.1 --activate
-
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Generate TypeScript declaration files
-        run: yarn tsc
-
-      - name: Determine version strategy
-        id: version
+      - name: Show publish outputs
+        shell: bash
         run: |
-          CURRENT_VERSION=$(node -p "require('./plugins/catalog-backend-module-bc-data-catalogue/package.json').version")
-          
-          if [[ "${{ github.ref }}" == refs/heads/main ]]; then
-            # On main: increment patch version and append commit SHA
-            # Extract base version (remove any pre-release tags)
-            BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*//')
-            IFS='.' read -ra VERSION_PARTS <<< "$BASE_VERSION"
-            MAJOR=${VERSION_PARTS[0]}
-            MINOR=${VERSION_PARTS[1]}
-            PATCH=${VERSION_PARTS[2]}
-            NEW_PATCH=$((PATCH + 1))
-            NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}-${{ steps.commit.outputs.sha8 }}"
-            echo "strategy=main" >> $GITHUB_OUTPUT
-            echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          else
-            # On feature branches: use branch name + commit SHA
-            # Extract base version (remove any pre-release tags)
-            BASE_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*//')
-            # Sanitize branch name: remove feature/ prefix, replace invalid chars, lowercase
-            BRANCH_NAME=$(echo "${{ github.ref_name }}" | sed 's/^feature\///' | sed 's/[^a-zA-Z0-9-]/-/g' | tr '[:upper:]' '[:lower:]')
-            # Remove leading/trailing dashes and collapse multiple dashes
-            BRANCH_NAME=$(echo "$BRANCH_NAME" | sed 's/^-\+//' | sed 's/-\+$//' | sed 's/-\+/-/g')
-            NEW_VERSION="${BASE_VERSION}-${BRANCH_NAME}-${{ steps.commit.outputs.sha8 }}"
-            echo "strategy=feature" >> $GITHUB_OUTPUT
-            echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build plugin
-        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
-        run: yarn build
-
-      - name: Update package.json for publishing
-        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
-        run: |
-          # Update package name to @bcgov scope
-          npm pkg set name="@bcgov/plugin-catalog-backend-module-bc-data-catalogue"
-          # Update version
-          npm pkg set version="${{ steps.version.outputs.version }}"
-          # Ensure pluginPackage is set
-          npm pkg set backstage.pluginPackage=true
-          # Remove private flag for publishing
-          npm pkg delete private
-
-      - name: Publish to GitHub Packages
-        working-directory: ./plugins/catalog-backend-module-bc-data-catalogue
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npm publish --access public
-
+          echo "Version: ${{ steps.publish_plugins.outputs.version }}"
+          echo "Plugin count: ${{ steps.publish_plugins.outputs.plugin_count }}"
+          echo 'Published packages: ${{ steps.publish_plugins.outputs.published_package_versions }}'

@@ -5694,6 +5694,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@bcgov/plugin-catalog-backend-module-bc-data-catalogue@workspace:^, @bcgov/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue":
+  version: 0.0.0-use.local
+  resolution: "@bcgov/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue"
+  dependencies:
+    "@backstage/backend-plugin-api": "npm:^1.4.1"
+    "@backstage/backend-test-utils": "npm:^1.7.0"
+    "@backstage/cli": "npm:^0.33.0"
+    "@backstage/config": "npm:^1.3.2"
+  languageName: unknown
+  linkType: soft
+
 "@bcoe/v8-coverage@npm:^0.2.3":
   version: 0.2.3
   resolution: "@bcoe/v8-coverage@npm:0.2.3"
@@ -7089,17 +7100,6 @@ __metadata:
   checksum: 10c0/82951cb7f3762dd78cca2ea291396841e3f4adfe26004b5badfed1cec4b6a04bb567dff94d0e41b35c61bdd7957317c64c22f58074d14b238d44e44d9e420019
   languageName: node
   linkType: hard
-
-"@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:^, @internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue":
-  version: 0.0.0-use.local
-  resolution: "@internal/plugin-catalog-backend-module-bc-data-catalogue@workspace:plugins/catalog-backend-module-bc-data-catalogue"
-  dependencies:
-    "@backstage/backend-plugin-api": "npm:^1.4.1"
-    "@backstage/backend-test-utils": "npm:^1.7.0"
-    "@backstage/cli": "npm:^0.33.0"
-    "@backstage/config": "npm:^1.3.2"
-  languageName: unknown
-  linkType: soft
 
 "@internationalized/date@npm:^3.10.0":
   version: 3.10.0
@@ -16671,7 +16671,7 @@ __metadata:
     "@backstage/plugin-search-backend-module-techdocs": "npm:^0.4.3"
     "@backstage/plugin-search-backend-node": "npm:^1.3.12"
     "@backstage/plugin-techdocs-backend": "npm:^2.0.3"
-    "@internal/plugin-catalog-backend-module-bc-data-catalogue": "workspace:^"
+    "@bcgov/plugin-catalog-backend-module-bc-data-catalogue": "workspace:^"
     app: "link:../app"
     better-sqlite3: "npm:^9.0.0"
     node-gyp: "npm:^10.0.0"

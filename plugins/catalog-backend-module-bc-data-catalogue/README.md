@@ -1,4 +1,4 @@
-# @internal/plugin-catalog-backend-module-bc-data-catalogue
+# @bcgov/plugin-catalog-backend-module-bc-data-catalogue
 
 This plugin integrates the BC Data Catalogue with Backstage, allowing you to import datasets, resources, and their metadata as entities in Backstage's software catalogue.
 
