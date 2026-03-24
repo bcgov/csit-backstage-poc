@@ -6194,11 +6194,11 @@ __metadata:
     "@backstage/backend-test-utils": "npm:^1.7.0"
     "@backstage/cli": "npm:^0.33.0"
     "@backstage/config": "npm:^1.3.2"
-    "@bcgov/plugin-catalog-common-bc-data-catalogue": "npm:*"
+    "@bcgov/plugin-catalog-common-bc-data-catalogue": "workspace:*"
   languageName: unknown
   linkType: soft
 
-"@bcgov/plugin-catalog-common-bc-data-catalogue@npm:*, @bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue":
+"@bcgov/plugin-catalog-common-bc-data-catalogue@workspace:*, @bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue":
   version: 0.0.0-use.local
   resolution: "@bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue"
   dependencies:
@@ -6217,7 +6217,7 @@ __metadata:
     "@backstage/dev-utils": "npm:^1.1.12"
     "@backstage/test-utils": "npm:^1.7.9"
     "@backstage/theme": "npm:^0.6.6"
-    "@bcgov/plugin-catalog-common-bc-data-catalogue": "npm:*"
+    "@bcgov/plugin-catalog-common-bc-data-catalogue": "workspace:*"
     "@material-ui/core": "npm:^4.9.13"
     "@material-ui/icons": "npm:^4.9.1"
     "@material-ui/lab": "npm:^4.0.0-alpha.61"

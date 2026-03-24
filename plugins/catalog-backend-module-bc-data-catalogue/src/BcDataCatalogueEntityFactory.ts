@@ -22,9 +22,9 @@ import type {
   BcDataCataloguePackage,
   BcOrganization,
   BcResource,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue/src/model/BcDataCatalogueModel';
+} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import { BcDataCatalogueNaming } from './BcDataCatalogueNaming';
-import { BcDataCatalogueSchemaUtils } from '@bcgov/plugin-catalog-common-bc-data-catalogue/src/utils/BcDataCatalogueSchemaUtils';
+import { BcDataCatalogueSchemaUtils } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type BcDataCatalogueEntityFactoryOptions = {
   reader: UrlReaderService;

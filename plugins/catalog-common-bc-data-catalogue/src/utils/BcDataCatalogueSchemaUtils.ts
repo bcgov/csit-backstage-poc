@@ -1,4 +1,4 @@
-import type { BcResource } from '@bcgov/plugin-catalog-common-bc-data-catalogue/src/model/BcDataCatalogueModel';
+import type { BcResource } from '../model/BcDataCatalogueModel';
 import type {
   DatasetSchema,
   DatasetSchemaField,

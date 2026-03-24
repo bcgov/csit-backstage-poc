@@ -4,10 +4,10 @@ import {
 } from '@backstage/backend-plugin-api';
 import {
   BcDataCataloguePackageSchema,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue/src/model/BcDataCatalogueModel';
+} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import type {
   BcDataCataloguePackage,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue/src/model/BcDataCatalogueModel';
+} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type BcDataCatalogueClientOptions = {
   reader: UrlReaderService;
