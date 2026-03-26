@@ -1,94 +1,43 @@
 # @bcgov/plugin-catalog-backend-module-bc-data-catalogue
 
-This plugin integrates the BC Data Catalogue with Backstage, allowing you to import datasets, resources, and their metadata as entities in Backstage's software catalogue.
+This package is part of the BC Data Catalogue Backstage integration.
 
-## Installation
+👉 **Refer to the main project README at the root of this repository for installation and configuration instructions.**
 
-This package is published to GitHub Packages and requires authentication to install, even though it's public.
+---
 
-### Prerequisites
+## Purpose
 
-1. Create a GitHub Personal Access Token (PAT)
-   - Go to [GitHub Settings → Developer settings → Personal access tokens → Tokens (classic)](https://github.com/settings/tokens)
-   - Click "Generate new token (classic)"
-   - Give it a descriptive name (e.g., "Backstage Package Access")
-   - Select the `read:packages` scope
-   - Give a lifespan of 90 days (or less)
-   - **Important**: Authorize the token for SSO with the `bcgov` organization after creating it
-   - Copy the token (you won't be able to see it again)
+The `@bcgov/plugin-catalog-backend-module-bc-data-catalogue` package provides the backend integration with the BC Data Catalogue.
 
-2. Set the token as an environment variable
-   
-   ```export GITHUB_TOKEN=your_token_here```
+It is responsible for:
 
-3. Create or update a `.npmrc` file in your project root:
+- fetching datasets from the BC Data Catalogue
+- transforming them into Backstage entities
+- registering entities such as:
+  - `Dataset`
+  - `API`
+  - `System`
+  - `Group`
+  - `User`
 
-    ```
-    @bcgov:registry=https://npm.pkg.github.com
-    //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-    ```
+---
 
-4. Depending on yarn version, you may also need to add to `.yarnrc.yaml`:
+## Usage
 
-    ```yaml
-    npmScopes:
-    bcgov:
-        npmRegistryServer: "https://npm.pkg.github.com"
+This package is intended to be registered as a backend module in Backstage:
 
-    npmRegistries:
-    "https://npm.pkg.github.com":
-        npmAuthToken: "${GITHUB_TOKEN}"
-
-    ```
-
-**Note**: The these files uses environment variable substitution, so your token is stored in your environment, not in the file.
-
-### Install the Package
-
-#### Using Yarn
-
-yarn add @bcgov/plugin-catalog-backend-module-bc-data-catalogue
-
-### Usage in Backstage
-
-Add the module to your Backstage backend in `packages/backend/src/index.ts`:
-
-```diff
-import { createBackend } from '@backstage/backend-defaults';
-
-const backend = createBackend();
-// ... other backend.add() calls ...
-
-+ backend.add(import('@bcgov/plugin-catalog-backend-module-bc-data-catalogue'));
-
-backend.start();
+```ts
+backend.add(import('@bcgov/plugin-catalog-backend-module-bc-data-catalogue'));
 ```
 
-## Configuration
+---
 
-### Configure backend reading allowlist
+## Notes
 
-Add the following configuration to your `app-config.yaml` to allow the backend to access the BC Data Catalogue API:
-
-```yaml
-backend:
-reading:
-    allow:
-    - host: catalogue.data.gov.bc.ca
-        scheme: https
-```
-
-**Note:** Additional hosts may be required depending what resources are being loaded. See https://github.com/bcgov/csit-backstage-poc/blob/main/app-config.yaml for example.
-
-### Fetch frequency
-
-Add the following configuration to your `app-config.yaml` to set the fetch frequency:
-
-```yaml
-catalog:
-  providers:
-    bc-data-catalogue:
-      env: dev
-      schedule: 
-        frequency: 10m
-```
+- This package is **not intended to be used in isolation**
+- It depends on:
+  - `@bcgov/plugin-catalog-common-bc-data-catalogue`
+- It is designed to be used together with:
+  - `@bcgov/catalog-dataset` (frontend UI)
+- All setup, configuration, and environment details are documented in the root project README

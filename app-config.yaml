@@ -9,6 +9,10 @@ backend:
   reading:
     allow:
       # Allow BC Data Catalogue host access from backend
+      - host: api.gov.bc.ca
+        scheme: https
+      - host: jh-etk.api.gov.bc.ca
+        scheme: https
       - host: catalogue.data.gov.bc.ca
         scheme: https
       - host: raw.githubusercontent.com
