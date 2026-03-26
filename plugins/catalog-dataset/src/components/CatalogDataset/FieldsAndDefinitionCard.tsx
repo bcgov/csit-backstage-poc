@@ -20,7 +20,7 @@ export const FieldsAndDefinitionCard = ({ }: Props) => {
     >
       <CardHeader title="Fields & Definitions" />
       <CardContent>
-        <Typography variant="body2">{'<gap>'}</Typography>
+        <Typography variant="body2">{'GAP<fieldsAndDefinitions>'}</Typography>
       </CardContent>
     </Card>
   );

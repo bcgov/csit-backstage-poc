@@ -8,6 +8,7 @@ import {
 } from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
 import type { Entity } from '@backstage/catalog-model';
+import { MarkdownContent } from '@backstage/core-components';
 
 type DatasetSpec = {
   description?: string;
@@ -41,9 +42,7 @@ export const MainCard = ({
   return (
     <Card>
       <CardContent>
-        <Typography variant="body1" style={{ whiteSpace: 'pre-line' }} paragraph>
-          {spec.description ?? ''}
-        </Typography>
+        <MarkdownContent content={spec.description ?? ''} />
 
         {entity.metadata.tags?.length ? (
           <div>
@@ -70,9 +69,8 @@ export const MainCard = ({
           <Typography variant="subtitle2" style={{ fontWeight: 600 }}>
             Part of Connected Services
           </Typography>
-          <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-            {spec.connectedServicesDescription ?? '—'}
-          </Typography>
+
+          <MarkdownContent content={spec.connectedServicesDescription ?? '—'} />
         </div>
 
         <div style={{ marginTop: 12 }}>

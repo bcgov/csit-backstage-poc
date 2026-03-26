@@ -4,6 +4,7 @@ import {
   CardContent,
   Typography,
 } from '@material-ui/core';
+import { MarkdownContent } from '@backstage/core-components';
 
 type Props = {
   currentVersion?: string;
@@ -45,17 +46,7 @@ export const VersioningAndChangeGovernanceCard = ({
           <strong>Last Updated:</strong> {lastUpdated ?? 'N/A'}
         </Typography>
 
-        {versioningDescription ? (
-          <>
-            <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-              {versioningDescription ?? 'N/A'}
-            </Typography>
-          </>
-        ) : (
-          <Typography variant="body2" gutterBottom>
-            N/A
-          </Typography>
-        )}
+        <MarkdownContent content={versioningDescription ?? 'N/A'} />
 
         <Typography
           variant="body2"
@@ -64,17 +55,7 @@ export const VersioningAndChangeGovernanceCard = ({
           <strong>Governance and Usage Constraints</strong>
         </Typography>
 
-        {governanceDescription ? (
-          <>
-            <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-              {governanceDescription ?? 'N/A'}
-            </Typography>
-          </>
-        ) : (
-          <Typography variant="body2" gutterBottom>
-            N/A
-          </Typography>
-        )}
+        <MarkdownContent content= {governanceDescription ?? 'N/A'} />
       </CardContent>
     </Card>
   );

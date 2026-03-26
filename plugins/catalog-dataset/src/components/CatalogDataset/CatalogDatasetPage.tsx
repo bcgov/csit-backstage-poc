@@ -1,4 +1,4 @@
-import { Grid, Card, CardContent, Typography } from '@material-ui/core';
+import { Grid, Card, CardContent, Typography, Link } from '@material-ui/core';
 import { EntityLayout, EntityRelationWarning } from '@backstage/plugin-catalog';
 import { useEntity } from '@backstage/plugin-catalog-react';
 import type { DatasetEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
@@ -67,64 +67,126 @@ export const CatalogDatasetPage = () => {
                   <Typography variant="body2" style={{ marginBottom: 8 }}>
                     On this page
                   </Typography>
-                  <Typography variant="body2">Overview</Typography>
-                  <Typography variant="body2">About this Dataset</Typography>
-                  <Typography variant="body2">Authoritative Designation</Typography>
-                  <Typography variant="body2">Access Methods</Typography>
-                  <Typography variant="body2">Schema</Typography>
-                  <Typography variant="body2">Fields &amp; definitions</Typography>
-                  <Typography variant="body2">Lineage and Quality</Typography>
                   <Typography variant="body2">
-                    Versioning and Change Governance
+                    <Link href="#overview">
+                      Overview
+                    </Link>
                   </Typography>
-                  <Typography variant="body2">Support</Typography>
-                  <Typography variant="body2">Related Resources</Typography>
+                  <Typography variant="body2">
+                    <Link href="#about-this-dataset">
+                      About this Dataset
+                    </Link>
+                  </Typography>
+                  {entity.metadata.tags?.includes('authoritative-data-register') ? (
+                  <Typography variant="body2">
+                    <Link href="#authoritative-designation">
+                      Authoritative Designation
+                    </Link>
+                  </Typography>
+                  ) : null}
+                  <Typography variant="body2">
+                    <Link href="#access-methods">
+                      Access Methods
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#schema">
+                      Schema
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#fields-and-definitions">
+                      Fields &amp; definitions
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#lineage-and-quality">
+                      Lineage and Quality
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#versioning-and-change-governance">
+                      Versioning and Change Governance
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#support">
+                      Support
+                    </Link>
+                  </Typography>
+                  <Typography variant="body2">
+                    <Link href="#related-resources">
+                      Related Resources
+                    </Link>
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
             <Grid item xs={12} md={8}>
-              <MainCard
-                entity={entity}
-                spec={spec}
-                ownerLabel={ownerLabel}
-                onViewApis={() => setApisOpen(true)}
-              />
+              <div id="overview">
+                <MainCard
+                  entity={entity}
+                  spec={spec}
+                  ownerLabel={ownerLabel}
+                  onViewApis={() => setApisOpen(true)}
+                />
+              </div>
 
-              <AboutDatasetCard description={spec.about?.description} />
+              <div id="about-this-dataset">
+                <AboutDatasetCard description={spec.about?.description} />
+              </div>
 
               {entity.metadata.tags?.includes('authoritative-data-register') ? (
-                <AuthoritativeDesignationCard />
+                <div id="authoritative-designation">
+                  <AuthoritativeDesignationCard />
+                </div>
               ) : null}
 
-              <AccessMethodsCard
-                accessMethods={spec.accessMethods}
-                apiEntityRefs={apiEntityRefs}
-              />
+              <div id="access-methods">
+                <AccessMethodsCard
+                  accessMethods={spec.accessMethods}
+                  apiEntityRefs={apiEntityRefs}
+                />
+              </div>
 
-              <SchemaCard tables={spec.schema?.tables} />
+              <div id="schema">
+                <SchemaCard tables={spec.schema?.tables} />
+              </div>
 
-              <FieldsAndDefinitionCard />
+              <div id="fields-and-definitions">
+                <FieldsAndDefinitionCard />
+              </div>
 
-              <LineageAndQualityCard
-                sourceSystem={spec.lineage?.sourceSystem}
-                transformation={spec.lineage?.transformation}
-                refresh={spec.lineage?.refresh}
-              />
+              <div id="lineage-and-quality">
+                <LineageAndQualityCard
+                  sourceSystem={spec.lineage?.sourceSystem}
+                  transformation={spec.lineage?.transformation}
+                  validation={spec.quality?.validation}
+                  refresh={spec.lineage?.refresh}
+                  qualityControls={spec.quality?.controls}
+                />
+              </div>
 
-              <VersioningAndChangeGovernanceCard
-                currentVersion={spec.versioning?.currentVersion}
-                initialRelease={spec.versioning?.initialRelease}
-                lastUpdated={spec.versioning?.lastUpdated}
-                versioningDescription={spec.versioning?.description}
-                governanceDescription={spec.governance?.description}
-              />
+              <div id="versioning-and-change-governance">
+                <VersioningAndChangeGovernanceCard
+                  currentVersion={spec.versioning?.currentVersion}
+                  initialRelease={spec.versioning?.initialRelease}
+                  lastUpdated={spec.versioning?.lastUpdated}
+                  versioningDescription={spec.versioning?.description}
+                  governanceDescription={spec.governance?.description}
+                />
+              </div>
 
-              <SupportCard support={spec.support} />
+              <div id="support">
+                <SupportCard support={spec.support} />
+              </div>
 
-              <RelatedResourcesCard
-                relatedResources={spec.relatedResources}
-              />
+              <div id="related-resources">
+                <RelatedResourcesCard
+                  relatedResources={spec.relatedResources}
+                />
+              </div>
             </Grid>
           </Grid>
 

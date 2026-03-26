@@ -35,7 +35,7 @@ type BcDataCatalogueEntityFactoryOptions = {
 const MANAGED_BY_LOCATION =
   'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search';
 
-const GAP = '<gap>';
+const GAP = 'GAP';
 
 export class BcDataCatalogueEntityFactory {
   private readonly reader: UrlReaderService;
@@ -235,6 +235,8 @@ export class BcDataCatalogueEntityFactory {
 
       if (tableCount > 0) {
         tags.push('has-schema');
+      } else {
+        tags.push('has-no-schema');
       }
 
       if (tableCount >= 2 && tableCount <= 5) {
@@ -251,66 +253,66 @@ export class BcDataCatalogueEntityFactory {
         spec: {
           owner: ownerGroupId,
           system: systemId,
-          type: GAP,
+          type: GAP+"<type>",
+
           description: pkg.notes || 'No description available',
           status: this.normalizeStatus(pkg.publish_state),
           securityClassification: this.normalizeSecurityClassification(
             pkg.security_class,
           ),
-          connectedServicesDescription: GAP,
-          updateFrequency: GAP,
+          connectedServicesDescription: GAP+"<connectedServicesDescription>",
+          updateFrequency: GAP+"<updateFrequency>",
           providesApis,
           accessMethods: accessMethods.length > 0 ? accessMethods : undefined,
           schema,
           quality: {
-            score: GAP,
-            validation: GAP,
-            controls: [GAP],
+            score: GAP+"<quality.score>",
+            validation: GAP+"<quality.validation>",
+            controls: [GAP+"<quality.controls>"],
           },
           governance: {
-            retention: GAP,
-            description: GAP,
+            retention: GAP+"<governance.retention>",
+            description: GAP+"<governance.description>",
           },
           about: {
             description: pkg.purpose || 'No description available',
           },
           authoritativeDesignation: {
-            authoritativeFor: GAP,
+            authoritativeFor: GAP+"<authoritativeDesignation.authoritativeFor>",
           },
           lineage: {
-            sourceSystem: GAP,
-            transformation: GAP,
-            refresh: GAP,
+            sourceSystem: GAP+"<lineage.sourceSystem>",
+            transformation: pkg.lineage_statement || 'No transformation information available',
+            refresh: GAP+"<lineage.refresh>",
           },
           versioning: {
-            currentVersion: GAP, // pkg.version is not populated for any of the 3000+ datasets
+            currentVersion: GAP+"<versioning.currentVersion>", // pkg.version is not populated for any of the 3000+ datasets
             initialRelease: pkg.record_publish_date,
             lastUpdated: pkg.record_last_modified,
-            description: GAP,
+            description: GAP+"<versioning.description>",
           },
           support: {
-            primary: this.getPrimarySupport(pkg),
             description: pkg.organization.description,
             dataCustodian: pkg.organization.title,
-            governanceAuthority: GAP,
-            pathways: GAP,
+            governanceAuthority: GAP+"<support.governanceAuthority>",
+            pathways: GAP+"<support.pathways>",
             dataAndSemantics: {
-              description: GAP,
-              channel: GAP,
-              responseTime: GAP,
-              escalation: GAP,
+              description: GAP+"<support.dataAndSemantics.description>",
+              channel: GAP+"<support.dataAndSemantics.channel>",
+              responseTime: GAP+"<support.dataAndSemantics.responseTime>",
+              escalation: GAP+"<support.dataAndSemantics.escalation>",
             },
             accessAndIntegration: {
-              description: GAP,
-              channel: GAP,
-              responseTime: GAP,
-              escalation: GAP,
+              description: GAP+"<support.accessAndIntegration.description>",
+              channel: GAP+"<support.accessAndIntegration.channel>",
+              responseTime: GAP+"<support.accessAndIntegration.responseTime>",
+              escalation: GAP+"<support.accessAndIntegration.escalation>",
             },
             governanceAndProductionEscalation: {
-              description: GAP,
-              channel: GAP,
-              referenceDataset: GAP,
-              responseTime: GAP,
+              description: GAP+"<support.governanceAndProductionEscalation.description>",
+              channel: GAP+"<support.governanceAndProductionEscalation.channel>",
+              referenceDataset: GAP+"<support.governanceAndProductionEscalation.referenceDataset>",
+              responseTime: GAP+"<support.governanceAndProductionEscalation.responseTime>",
             },
           },
           relatedResources:
@@ -599,26 +601,6 @@ export class BcDataCatalogueEntityFactory {
       format: resource.format,
       updateFrequency: resource.resource_update_cycle,
     };
-  }
-
-  private getPrimarySupport(pkg: BcDataCataloguePackage): string | undefined {
-    const preferredRoles = [
-      'pointOfContact',
-      'distributor',
-      'custodian',
-      'dataSteward',
-      'dataManager',
-      'businessExpert',
-    ];
-
-    for (const role of preferredRoles) {
-      const match = pkg.contacts.find(contact => contact.role === role);
-      if (match?.email) {
-        return match.email.toLowerCase();
-      }
-    }
-
-    return pkg.contacts[0]?.email?.toLowerCase();
   }
 
   private normalizeStatus(publishState: string): DatasetStatus {

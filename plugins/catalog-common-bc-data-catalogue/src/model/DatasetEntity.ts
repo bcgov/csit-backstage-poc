@@ -81,7 +81,6 @@ export type DatasetGovernanceAndProductionEscalation = {
 };
 
 export type DatasetSupport = {
-  primary?: string;
   description?: string;
   dataCustodian?: string;
   governanceAuthority?: string;

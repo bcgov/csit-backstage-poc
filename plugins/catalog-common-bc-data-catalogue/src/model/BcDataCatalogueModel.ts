@@ -132,6 +132,7 @@ export const BcDataCataloguePackageSchema = z.object({
   license_id: z.string(),
   license_title: z.string().nullable(),
   license_url: z.string().url(),
+  lineage_statement: z.string().nullable().optional(),
   maintainer: z.string().nullable(),
   maintainer_email: z.string().email().nullable(),
   metadata_created: z.string(),

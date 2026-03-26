@@ -1,4 +1,5 @@
-import { Card, CardHeader, CardContent, Typography } from '@material-ui/core';
+import { Card, CardHeader, CardContent } from '@material-ui/core';
+import { MarkdownContent } from '@backstage/core-components';
 
 type Props = {
   description?: string;
@@ -16,9 +17,7 @@ export const AboutDatasetCard = ({ description }: Props) => {
     >
       <CardHeader title="About this dataset" />
       <CardContent>
-        <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-          {description ?? 'No description provided.'}
-        </Typography>
+        <MarkdownContent content={description ?? 'No description provided.'} />
       </CardContent>
     </Card>
   );

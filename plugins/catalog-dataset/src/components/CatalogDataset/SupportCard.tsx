@@ -4,6 +4,7 @@ import {
   CardContent,
   Typography,
 } from '@material-ui/core';
+import { MarkdownContent } from '@backstage/core-components';
 
 type DatasetSupportChannel = {
   description?: string;
@@ -21,7 +22,6 @@ type DatasetGovernanceAndProductionEscalation = {
 
 type Props = {
   support?: {
-    primary?: string;
     description?: string;
     dataCustodian?: string;
     governanceAuthority?: string;
@@ -49,13 +49,7 @@ const SupportChannelSection = ({
         <strong>{title}</strong>
       </Typography>
 
-      {channel.description ? (
-        <div style={{ marginTop: 4 }}>
-          <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-            {channel.description}
-          </Typography>
-        </div>
-      ) : null}
+      <MarkdownContent content={channel.description ?? '-'} />
 
       <div style={{ marginTop: 8 }}>
         <Typography variant="body2">
@@ -84,17 +78,8 @@ export const SupportCard = ({ support }: Props) => {
     >
       <CardHeader title="Support" />
       <CardContent>
-        {support?.description ? (
-          <div style={{ marginBottom: 16 }}>
-            <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-              {support.description}
-            </Typography>
-          </div>
-        ) : (
-          <Typography variant="body2" gutterBottom>
-            No support information defined.
-          </Typography>
-        )}
+
+        <MarkdownContent content={support?.description || 'No support information defined.'} />
 
         <Typography variant="body2">
           <strong>Dataset Ownership</strong>
@@ -117,9 +102,7 @@ export const SupportCard = ({ support }: Props) => {
           <strong>Support Pathways</strong>
         </Typography>
         <div style={{ marginTop: 4 }}>
-          <Typography variant="body2" style={{ whiteSpace: 'pre-line' }}>
-            {support?.pathways}
-          </Typography>
+          <MarkdownContent content={support?.pathways ?? '-'} />
         </div>
 
         <SupportChannelSection
