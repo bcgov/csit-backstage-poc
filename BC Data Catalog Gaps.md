@@ -167,45 +167,535 @@ Primary purpose is to provide access to public data rather than document dataset
 | Support | Governance and Produciton Escalation - Response time | `spec.support.governanceAndProductionEscalation.responseTime` | Simple string. |
 | Related resources | link | `spec.relatedResources: Array<{ url: string; title?: string }>` | Kept separate from `metadata.links` if UI needs curated related resources. |
 
-## Key Takeaways
 
-### Heavy reuse fields (high impact)
-These drive large parts of the UI:
-- `resources[]*` → **drives ~50% of UI**
-- `notes*` → description everywhere
-- `organization.title*` → ownership everywhere
-- `record_* dates*` → governance + header
-- `tags*` → classification + discovery
+## BC Data Catalog → Backstage API UI Mapping
 
-### Backstage-native vs custom
+### Detailed Mapping Table
 
-**Fits cleanly into Backstage:**
-- name/title/description
-- tags
-- links (partially)
-- API entities (from resources)
+| UI section | UI property | BC Data Catalog source | Transformation / logic | Backstage mapping | Notes / gaps |
+|---|---|---|---|---|---|
+|**main**|title|oad.info.title|direct|entity.metadata.title|—|
+|---|description|oad.info.description or summary|direct|entity.metadata.description|—|
+|---|tags|oad.*.tags[].name|direct|entity.metadata.tags|—|
+|---|Part of Connected Services|---|not available|custom|gap|
+|---|Learn more|oas.*.extenalDocs|direct|entity.metadata.links|—|
+|---|Provider Ministry|---|not available|custom|gap - We have an Organization but it does not corrispond directly to a Ministry |
+|---|Status|---|not available|custom|gap - we have an "active" status but it does not map to anything like "Beta"|
+|---|Security Classification|security_class|direct (mapping)|entity.spec.securityClassification|This is mirroring the Dataset security classification. No independant source for APIs|
+|---|Application|---|not available|custom|gap|
+|---|Type|---|not available|custom|gap - Not sure what types we are expecting here.  If it is API then that is redundant.|
+|---|SDX Required|oad.tags[].name == 'SDX'|direct|custom|—|
+|---|Environments|oad.servers[]|direct|custom|—|
+|---|Access Model|---|not available|custom|gap - Not user what we are tying to do here.  Looks like a hodgepoge of data.  If we want to provide additional details for each environment then we should have a section for each environment in the UI.  We can pull the security info from the OAD but this info will be the same for all environments.  We have no other datasource right now.|
+|**About this API**|description|---|not available|custom|We aleady have the top level description we do not have a source for another description.|
+|**Data Source**|This API uses|---|not available|custom|gap|
+|---|Type|---|not available|custom|gap - What is our source for this?  Maybe we can look for specific tags.  This would not guarantee us a unique "Type" though|
+|---|Authoritative for|---|not available|custom|gap|
+|---|update frequency|resource_update_cycle|direct|custom|—|
+|---|Province-wide coverage|---|not available|custom|gap|
+|---|Governance|---|not available|custom|gap|
+|---|View Dataset Record|parent dataset|direct|entity.relation|—|
+|**Access and Onboarding**|description|---|not available|custom|gap - this data is not well structured so it looks like just a freeform text property.  We dont have a source for this although we potientially have access to detailed scope information in the OAD.  Although ideally we would present that in the Swagger UI as that is where developers would be looking for this.|
+|---|Environments.<dev|test|prod>|oad.servers[].url|direct|custom|—|
+|---|Environments.description|oad.servers[].description|direct|custom|—|
+|**Technical Reference**|View OpenAPI description|---|not available|custom|gap - Is this a link to the raw OpenAPI Spec? Are we creating our own custom inteface for this or are we going to use the existing Backstage functionality?|
+|---|Base URLs|oad.servers[]|direct|custom|It would be nice if we had one section for environment information instead of sprinkling it around the interface|
+|---|Endpoint|oad.paths[].operations[]|direct|custom|Looks like we are trying to recreate the Swagger UI here again but with less functionality|
+|---|Authentication|oad.paths[].operations[]|direct|custom|—|
+|---|Example Request|oad.paths[].operations[]|direct|custom|—|
+|---|Example Response|oad.paths[].operations[]|direct|custom|—|
+|**Data and Semantics**|Data returned|---|not available|custom|There are potentially dozens of differnt endpoints in an API so the data returned could be dozens of different data structures.  This is all provided by the Swagger UI and would be duplicated here except without the meaningfull context|
+|---|Authoratative Data source|---|not available|custom|gap - Is this just a link to the Dataset like we do above with View Dataset Record?|
+|---|Field Definitions|---|not available|custom|gap - This looks like links to the Dataset Record again and a link to the Data Dictionany which we want to be part of the Dataset.  The Data Dictionary is not directly applicable to the API. The API has its own documentation for the data it exposes.|
+|**Versioning and Change Governance**|Current Version|oad.info.version|direct|custom|—|
+|---|Initial Release|resource.created|direct|custom|This just indicates when the resource was added to BCDC.|
+|---|Last Updated|resource.metadata_modified|direct|custom|This probably just indicates when BCDC was updated.|
+|---|description|---|not available|custom|gap|
+|---|Change Management|---|not available|custom|gap|
+|---|Governance and Usage Constraints|---|not available|custom|gap|
+|**Support**|API Ownership|---|not available|custom|gap|
+|---|Support Pathways|---|not available|custom|gap - This looks like boilerplate|
+|---|Access and SDX Onboarding - description|not available|custom|gap|
+|---|Access and SDX Onboarding - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
+|---|Access and SDX Onboarding - Response Time|---|not available|custom|gap|
+|---|Access and SDX Onboarding - Escalation|---|not available|custom|gap|
+|---|Technical Support - description|not available|custom|gap|
+|---|Technical Support - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
+|---|Technical Support - Response Time|---|not available|custom|gap|
+|---|Technical Support - Escalation|---|not available|custom|gap|
+|---|Data & Semantics Support - description|not available|custom|gap|
+|---|Data & Semantics Support - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
+|---|Data & Semantics Support - Response Time|---|not available|custom|gap|
+|---|Data & Semantics Support - Escalation|---|not available|custom|gap|
+|---|Production Incident Escalation|---|not available|custom|gap|
+|**Related Resources**|oas.*.extenalDocs|direct|entity.metadata.links|This gives us the same content as More Info.  |
 
-**Needs custom modeling:**
-- access methods grouping
-- schema rendering
-- governance sections
-- designation section
-- most resource-derived UI
 
----
+```json
+{
+    "help": "https://catalogue.data.gov.bc.ca/api/3/action/help_show?name=package_show",
+    "success": true,
+    "result": {
+        "author": "a79cf565-4b26-4ae7-94cb-f274ab562ef2",
+        "author_email": null,
+        "creator_user_id": "a79cf565-4b26-4ae7-94cb-f274ab562ef2",
+        "download_audience": "Public",
+        "id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+        "isopen": false,
+        "license_id": "25",
+        "license_title": "King's Printer Licence - British Columbia",
+        "license_url": "https://www.bclaws.gov.bc.ca/standards/Licence.html",
+        "maintainer": null,
+        "maintainer_email": null,
+        "metadata_created": "2015-02-18T21:40:07.828528",
+        "metadata_modified": "2024-02-15T23:38:00.603956",
+        "metadata_visibility": "Public",
+        "name": "bc-laws-api",
+        "notes": "BC Laws is an electronic library providing free public access to the laws of British Columbia. BC Laws is hosted by the Queen’s Printer of British Columbia and published in partnership with the Ministry of Justice and the Law Clerk of the Legislative Assembly.\n\nBC Laws contains a comprehensive collection of BC legislation and related materials. It is available on the internet in two forms:\nFirst: The library is available as a web site in which users can browse and search the laws of British Columbia.\nSecond: The library is available as a portal to legislation in raw XML data format, accessible via the BC Laws API.\n\n This direct access to raw data is intended to enable third parties to build or add their own custom applications based on the structure of the data and all the associated search functionality inherent in that structure. The BC Laws website itself is an example of one such application of the BC Laws API.\n\nThe BC Laws API is available according to the [Queen's Printer License – British Columbia] (https://www.bclaws.gov.bc.ca/standards/QP-License.html).",
+        "num_resources": 4,
+        "num_tags": 4,
+        "organization": {
+            "id": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
+            "name": "king-s-printer",
+            "title": "King's Printer",
+            "type": "organization",
+            "description": "",
+            "image_url": "",
+            "created": "2015-02-18T13:36:56.424917",
+            "is_organization": true,
+            "approval_status": "approved",
+            "state": "active"
+        },
+        "owner_org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
+        "private": false,
+        "publish_state": "PUBLISHED",
+        "record_create_date": "2015-02-18",
+        "record_last_modified": "2024-02-15",
+        "record_publish_date": "2015-02-19",
+        "resource_status": "onGoing",
+        "security_class": "PUBLIC",
+        "state": "active",
+        "title": "BC Laws API",
+        "type": "bcdc_dataset",
+        "url": "https://raw.githubusercontent.com/BCDevExchange/API-Management/master/swagger-json/bclaws.json",
+        "version": null,
+        "view_audience": "Public",
+        "contacts": [
+            {
+                "displayed": [
+                    "displayed"
+                ],
+                "email": "niel.li@gov.bc.ca",
+                "name": "Niel Li",
+                "org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
+                "role": "businessExpert"
+            },
+            {
+                "displayed": [],
+                "email": "priyanka.alexander@gov.bc.ca",
+                "name": "Priyanka Alexander",
+                "org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
+                "role": "businessExpert"
+            }
+        ],
+        "dates": [
+            {
+                "date": "2015-02-18",
+                "type": "Created"
+            }
+        ],
+        "groups": [
+            {
+                "description": "An API Registry for BC Government, [click here for BC Government API Guidelines](https://developer.gov.bc.ca/Data-and-APIs/BC-Government-API-Guidelines)",
+                "display_name": "BC Government API Registry",
+                "id": "65c44d61-ff6e-418f-b1aa-6023c3f7ed4c",
+                "image_display_url": "https://catalogue.data.gov.bc.ca/uploads/group/2018-02-21-215929.13946617069795.png",
+                "name": "bc-government-api-registry",
+                "title": "BC Government API Registry"
+            }
+        ],
+        "more_info": [
+            {
+                "description": "",
+                "url": "http://www.bclaws.ca/civix/template/complete/api/index.html"
+            }
+        ],
+        "resources": [
+            {
+                "bcdc_type": "webservice",
+                "cache_last_updated": null,
+                "cache_url": null,
+                "created": "2015-02-18T13:40:58.220000",
+                "datastore_active": false,
+                "description": "",
+                "details": [],
+                "format": "html",
+                "geographic_extent": [],
+                "hash": "",
+                "id": "361a7459-8f6f-4b02-bea8-bbe9ed764176",
+                "iso_topic_category": [],
+                "json_table_schema": {},
+                "metadata_modified": "2015-02-18T13:40:58.220000",
+                "mimetype": null,
+                "mimetype_inner": null,
+                "name": "API Application Programming Interface",
+                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+                "position": 0,
+                "preview_info": [],
+                "projection_name": "na",
+                "resource_access_method": "service",
+                "resource_storage_location": "na",
+                "resource_type": "data",
+                "resource_update_cycle": "asNeeded",
+                "size": null,
+                "spatial_datatype": "",
+                "state": "active",
+                "url": "http://www.bclaws.ca/civix/template/complete/api/index.html",
+                "url_type": null,
+                "temporal_extent": [
+                    {
+                        "beginning_date": "",
+                        "end_date": ""
+                    }
+                ]
+            },
+            {
+                "bcdc_type": "webservice",
+                "cache_last_updated": null,
+                "cache_url": null,
+                "created": "2016-03-11T10:22:44.026000",
+                "datastore_active": false,
+                "description": "",
+                "details": [],
+                "format": "openapi-json",
+                "geographic_extent": [],
+                "hash": "",
+                "id": "6505a462-75de-44df-8db9-60a63cf7ab2f",
+                "iso_topic_category": [],
+                "json_table_schema": {},
+                "metadata_modified": "2016-03-11T10:22:44.026000",
+                "mimetype": null,
+                "mimetype_inner": null,
+                "name": "API Console",
+                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+                "position": 1,
+                "preview_info": [],
+                "projection_name": "na",
+                "resource_access_method": "service",
+                "resource_storage_location": "na",
+                "resource_type": "data",
+                "resource_update_cycle": "asNeeded",
+                "size": 0,
+                "spatial_datatype": "",
+                "state": "active",
+                "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
+                "url_type": "",
+                "temporal_extent": [
+                    {
+                        "beginning_date": "",
+                        "end_date": ""
+                    }
+                ]
+            },
+            {
+                "bcdc_type": "webservice",
+                "cache_last_updated": null,
+                "cache_url": null,
+                "created": "2015-12-18T17:44:48.147000",
+                "datastore_active": false,
+                "description": "",
+                "details": [],
+                "format": "json",
+                "geographic_extent": [],
+                "hash": "",
+                "id": "3664d2d3-6dcb-4307-9652-a28332981ca3",
+                "iso_topic_category": [],
+                "json_table_schema": {},
+                "metadata_modified": "2015-12-18T17:44:48.147000",
+                "mimetype": null,
+                "mimetype_inner": null,
+                "name": "API Specs",
+                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+                "position": 2,
+                "preview_info": [],
+                "projection_name": "na",
+                "resource_access_method": "service",
+                "resource_storage_location": "na",
+                "resource_type": "data",
+                "resource_update_cycle": "asNeeded",
+                "size": null,
+                "spatial_datatype": "",
+                "state": "active",
+                "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
+                "url_type": "",
+                "temporal_extent": [
+                    {
+                        "beginning_date": "",
+                        "end_date": ""
+                    }
+                ]
+            },
+            {
+                "bcdc_type": "webservice",
+                "cache_last_updated": null,
+                "cache_url": null,
+                "created": "2015-12-17T16:48:45.099000",
+                "datastore_active": false,
+                "description": "",
+                "details": [],
+                "format": "html",
+                "geographic_extent": [],
+                "hash": "",
+                "id": "fbadcf16-a7cf-4128-b7d1-65b5d5b5aa79",
+                "iso_topic_category": [],
+                "json_table_schema": {},
+                "metadata_modified": "2015-12-17T16:48:45.099000",
+                "mimetype": null,
+                "mimetype_inner": null,
+                "name": "API Spec Editor",
+                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+                "position": 3,
+                "preview_info": [],
+                "projection_name": "na",
+                "resource_access_method": "service",
+                "resource_storage_location": "na",
+                "resource_type": "data",
+                "resource_update_cycle": "asNeeded",
+                "size": 0,
+                "spatial_datatype": "",
+                "state": "active",
+                "url": "https://oas-editor.apps.gov.bc.ca/?url=https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
+                "url_type": "",
+                "temporal_extent": [
+                    {
+                        "beginning_date": "",
+                        "end_date": ""
+                    }
+                ]
+            }
+        ],
+        "tags": [
+            {
+                "display_name": "API",
+                "id": "4bd16f13-e4af-48ab-9676-255d04600fd4",
+                "name": "API",
+                "state": "active",
+                "vocabulary_id": null
+            },
+            {
+                "display_name": "BCDevExchange",
+                "id": "68c0b5f9-51e8-40d9-9988-87e17b672c48",
+                "name": "BCDevExchange",
+                "state": "active",
+                "vocabulary_id": null
+            },
+            {
+                "display_name": "LAWS",
+                "id": "b9260b3e-1cc0-4a42-ba37-08d7e59cfabb",
+                "name": "LAWS",
+                "state": "active",
+                "vocabulary_id": null
+            },
+            {
+                "display_name": "OpenAPI spec",
+                "id": "5c1e7cd0-d772-4430-8efd-63bb6954f803",
+                "name": "OpenAPI spec",
+                "state": "active",
+                "vocabulary_id": null
+            }
+        ],
+        "relationships_as_subject": [],
+        "relationships_as_object": []
+    }
+}
+```
 
-## Recommendation
+```json
+{
+      "bcdc_type": "webservice",
+      "cache_last_updated": null,
+      "cache_url": null,
+      "created": "2016-03-11T10:22:44.026000",
+      "datastore_active": false,
+      "description": "",
+      "details": [],
+      "format": "openapi-json",
+      "geographic_extent": [],
+      "hash": "",
+      "id": "6505a462-75de-44df-8db9-60a63cf7ab2f",
+      "iso_topic_category": [],
+      "json_table_schema": {},
+      "metadata_modified": "2016-03-11T10:22:44.026000",
+      "mimetype": null,
+      "mimetype_inner": null,
+      "name": "API Console",
+      "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
+      "position": 1,
+      "preview_info": [],
+      "projection_name": "na",
+      "resource_access_method": "service",
+      "resource_storage_location": "na",
+      "resource_type": "data",
+      "resource_update_cycle": "asNeeded",
+      "size": 0,
+      "spatial_datatype": "",
+      "state": "active",
+      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
+      "url_type": "",
+      "temporal_extent": [
+         {
+            "beginning_date": "",
+            "end_date": ""
+         }
+      ]
+}
+```
 
-Do NOT try to map everything directly to Backstage entity fields.
+```json
+{
+      "bcdc_type": "webservice",
+      "cache_last_updated": null,
+      "cache_url": null,
+      "created": "2026-02-04T00:10:02.783733",
+      "datastore_active": false,
+      "format": "openapi-json",
+      "hash": "",
+      "id": "9289ded0-fbcf-4cb4-ada7-aee5883206e5",
+      "isUrl": "true",
+      "iso_topic_category": [],
+      "json_table_schema": {},
+      "metadata_modified": "2026-02-04T00:10:02.774965",
+      "mimetype": null,
+      "mimetype_inner": null,
+      "name": "Directory API spec",
+      "package_id": "84aa4145-e8d9-4596-b4ee-9b568209f180",
+      "position": 2,
+      "projection_name": "na",
+      "resource_access_method": "service",
+      "resource_storage_location": "web or ftp site",
+      "resource_type": "data",
+      "resource_update_cycle": "asNeeded",
+      "size": null,
+      "spatial_datatype": "",
+      "state": "active",
+      "url": "https://api.gov.bc.ca/ds/api/v3/openapi.yaml",
+      "url_type": null
+}
+```
 
-Instead:
-1. Store only core metadata in entity (`metadata`, minimal `spec`)
-2. Put raw BCDC payload in:
-   - annotation (small) OR
-   - external fetch (better)
-3. Build a **normalized view model in the frontend plugin**
+```json
+{
+      "bcdc_type": "webservice",
+      "cache_last_updated": null,
+      "cache_url": "null",
+      "created": "2016-03-11T10:09:28.901000",
+      "datastore_active": "false",
+      "description": "",
+      "details": [],
+      "format": "openapi-json",
+      "geographic_extent": [],
+      "hash": "",
+      "id": "40d6411e-ab98-4df9-a24e-67f81c45f6fa",
+      "iso_topic_category": [],
+      "json_table_schema": {},
+      "metadata_modified": "2016-03-11T10:09:28.901000",
+      "mimetype": "null",
+      "mimetype_inner": "null",
+      "name": "API Specification",
+      "package_id": "8f4a016f-14db-4def-8ef9-7c797de1cdd9",
+      "position": 0,
+      "preview_info": [],
+      "projection_name": "epsg4326",
+      "resource_access_method": "service",
+      "resource_storage_location": "na",
+      "resource_type": "data",
+      "resource_update_cycle": "asNeeded",
+      "size": 0,
+      "spatial_datatype": "",
+      "state": "active",
+      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/geocoder/geocoder-combined.json",
+      "url_type": "",
+      "temporal_extent": [
+         {
+            "__extras": {
+                  "[object Object]": ""
+            },
+            "beginning_date": "",
+            "end_date": ""
+         }
+      ]
+}
+```
 
-This avoids:
-- overloading annotations
-- brittle mappings
-- fighting Backstage’s data model
+```json
+{
+      "bcdc_type": "webservice",
+      "cache_last_updated": null,
+      "cache_url": null,
+      "created": "2018-02-21T22:18:49.675000",
+      "datastore_active": false,
+      "description": "",
+      "details": [],
+      "format": "openapi-json",
+      "geographic_extent": [],
+      "hash": "",
+      "id": "3692fd5e-87e2-47ab-8eee-9131ea249436",
+      "iso_topic_category": [],
+      "metadata_modified": "2018-02-21T22:18:49.675000",
+      "mimetype": null,
+      "mimetype_inner": null,
+      "name": "API Console - OAS3",
+      "package_id": "f44a884d-8fed-4b6a-99e7-19e8a01691ec",
+      "position": 0,
+      "preview_info": [],
+      "projection_name": "na",
+      "resource_access_method": "service",
+      "resource_storage_location": "na",
+      "resource_type": "data",
+      "resource_update_cycle": "asNeeded",
+      "size": 0,
+      "spatial_datatype": "",
+      "state": "active",
+      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/news/news-oas3.yaml",
+      "url_type": "",
+      "temporal_extent": [
+         {
+            "beginning_date": "",
+            "end_date": ""
+         }
+      ]
+}
+```
+
+```json
+{
+      "bcdc_type": "webservice",
+      "cache_last_updated": null,
+      "cache_url": "null",
+      "created": "2016-03-17T12:04:28.837000",
+      "datastore_active": "false",
+      "description": "",
+      "format": "openapi-json",
+      "hash": "",
+      "id": "82cd3194-0955-4d7e-b35a-78a98fda153a",
+      "iso_topic_category": [],
+      "json_table_schema": {},
+      "metadata_modified": "2025-01-17T17:44:59.241069",
+      "mimetype": "null",
+      "mimetype_inner": "null",
+      "name": "API Specification",
+      "package_id": "3dad0c30-ef32-4f4c-82fa-33787d5f85f8",
+      "position": 0,
+      "projection_name": "epsg4326",
+      "resource_access_method": "service",
+      "resource_storage_location": "na",
+      "resource_type": "data",
+      "resource_update_cycle": "asNeeded",
+      "size": null,
+      "spatial_datatype": "",
+      "state": "active",
+      "supplemental_info": "",
+      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/router/router.json",
+      "url_type": ""
+}
+```

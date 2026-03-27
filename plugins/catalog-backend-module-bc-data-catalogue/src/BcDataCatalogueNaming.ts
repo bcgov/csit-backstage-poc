@@ -24,8 +24,16 @@ export class BcDataCatalogueNaming {
     return `component:default/${name.toLowerCase()}`;
   }
 
+  getDatasetId(name: string): string {
+    return `dataset:default/${name.toLowerCase()}`;
+  }
+
   getApiId(name: string): string {
     return `api:default/${name.toLowerCase()}`;
+  }
+
+  getOpenApiId(name: string): string {
+    return `openapi:default/${name.toLowerCase()}`;
   }
 
   extractDistinguishingSuffix(resourceName: string): string {

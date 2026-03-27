@@ -13,7 +13,6 @@ import { useApi } from '@backstage/core-plugin-api';
 import { catalogApiRef, EntityRefLink } from '@backstage/plugin-catalog-react';
 import { parseEntityRef, stringifyEntityRef } from '@backstage/catalog-model';
 import { useAsync } from 'react-use';
-import { getOpenApiSummary } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
   open: boolean;
@@ -22,6 +21,21 @@ type Props = {
   apiEntityRefs: string[];
   namespace?: string;
 };
+
+type ApiCard = {
+  entityRef: string;
+  title: string;
+  type: string;
+  security: string[];
+  environments: Array<{
+    name?: string;
+    url?: string;
+    description?: string;
+  }>;
+  isOpenApi: boolean;
+};
+
+const GAP = 'Gap';
 
 export const DatasetApisDialog = ({
   open,
@@ -56,25 +70,47 @@ export const DatasetApisDialog = ({
   );
 
   const { value: apiCards = [], loading: apiCardsLoading } = useAsync(
-    async () => {
+    async (): Promise<ApiCard[]> => {
       if (!open || !apiEntities?.length) {
         return [];
       }
 
-      return await Promise.all(
-        apiEntities.map(async api => {
-          const apiSpec = (api.spec ?? {}) as Record<string, any>;
-          const openApiSummary = await getOpenApiSummary(apiSpec.definition);
+      return apiEntities.map(api => {
+        const apiSpec = (api.spec ?? {}) as Record<string, any>;
+        const technicalReference =
+          (apiSpec.technicalReference as Record<string, any> | undefined) ?? {};
+        const environments = Array.isArray(apiSpec.environments)
+          ? apiSpec.environments
+          : [];
+        const isOpenApi = api.kind === 'OpenApi';
 
-          return {
-            entityRef: stringifyEntityRef(api),
-            title: api.metadata.title ?? api.metadata.name,
-            type: apiSpec.type ?? '—',
-            security: openApiSummary.securityRequirements ?? [],
-            environments: openApiSummary.environments ?? [],
-          };
-        }),
-      );
+        return {
+          entityRef: stringifyEntityRef(api),
+          title: api.metadata.title ?? api.metadata.name,
+          type: apiSpec.type ?? '—',
+          security:
+            isOpenApi && Array.isArray(technicalReference.authentication)
+              ? technicalReference.authentication
+              : [],
+          environments: isOpenApi
+            ? environments.map(environment => ({
+                name:
+                  typeof environment?.name === 'string'
+                    ? environment.name
+                    : undefined,
+                url:
+                  typeof environment?.url === 'string'
+                    ? environment.url
+                    : undefined,
+                description:
+                  typeof environment?.description === 'string'
+                    ? environment.description
+                    : undefined,
+              }))
+            : [],
+          isOpenApi,
+        };
+      });
     },
     [open, apiEntities],
   );
@@ -94,9 +130,7 @@ export const DatasetApisDialog = ({
             <Typography variant="h3" component="h2" gutterBottom>
               APIs
             </Typography>
-            <Typography variant="body1">
-              Dataset: {datasetTitle}
-            </Typography>
+            <Typography variant="body1">Dataset: {datasetTitle}</Typography>
           </div>
         </div>
       </DialogTitle>
@@ -132,23 +166,25 @@ export const DatasetApisDialog = ({
                       />
                     </Typography>
 
-                    <Typography variant="body1">
-                      Type: {api.type}
-                    </Typography>
+                    <Typography variant="body1">Type: {api.type}</Typography>
 
                     <Typography variant="body1" style={{ marginTop: 8 }}>
                       <strong>Security:</strong>
                     </Typography>
                     {api.security.length ? (
                       <ul style={{ margin: 0, paddingLeft: 20 }}>
-                        {api.security.map((s: string, i: number) => (
+                        {api.security.map((security, i) => (
                           <li key={i}>
-                            <Typography variant="body2">{s}</Typography>
+                            <Typography variant="body2">
+                              {security}
+                            </Typography>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <Typography variant="body2">—</Typography>
+                      <Typography variant="body2">
+                        {api.isOpenApi ? '—' : GAP}
+                      </Typography>
                     )}
 
                     <Typography variant="body1" style={{ marginTop: 8 }}>
@@ -156,14 +192,21 @@ export const DatasetApisDialog = ({
                     </Typography>
                     {api.environments.length ? (
                       <ul style={{ margin: 0, paddingLeft: 20 }}>
-                        {api.environments.map((e: string, i: number) => (
+                        {api.environments.map((environment, i) => (
                           <li key={i}>
-                            <Typography variant="body2">{e}</Typography>
+                            <Typography variant="body2">
+                              {environment.name ||
+                                environment.description ||
+                                environment.url ||
+                                '—'}
+                            </Typography>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <Typography variant="body2">—</Typography>
+                      <Typography variant="body2">
+                        {api.isOpenApi ? '—' : GAP}
+                      </Typography>
                     )}
                   </CardContent>
                 </Card>
@@ -180,10 +223,7 @@ export const DatasetApisDialog = ({
 
               return (
                 <li key={apiRef}>
-                  <EntityRefLink
-                    entityRef={apiRef}
-                    title={parsed.name}
-                  />
+                  <EntityRefLink entityRef={apiRef} title={parsed.name} />
                 </li>
               );
             })}
