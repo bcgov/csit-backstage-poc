@@ -8,7 +8,7 @@ import {
 } from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
 import type { Entity } from '@backstage/catalog-model';
-import { MarkdownContent } from '@backstage/core-components';
+import { MarkdownContent, Link as InternalLink } from '@backstage/core-components';
 
 type DatasetSpec = {
   description?: string;
@@ -178,12 +178,12 @@ export const MainCard = ({
               <strong>Need help?:</strong>
             </Typography>
             <Typography variant="body2">
-              <Link
-                href="https://www.notimplemented.net/"
+              <InternalLink
+                to="/docs/default/component/connected-services-getting-started-techdocs/#learn-more"
                 target="_blank"
               >
                 {'Get help and contact information'}
-              </Link>
+              </InternalLink>
             </Typography>
           </Grid>
         </Grid>
