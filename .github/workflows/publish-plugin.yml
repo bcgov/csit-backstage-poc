@@ -17,9 +17,11 @@ jobs:
     steps:
       - name: Publish Backstage plugins
         id: publish_plugins
-        uses: bcgov/aps-devops/publish-backstage-plugins@dev
+        uses: bcgov/aps-devops/publish-backstage-plugins@aps-4105-connect-pipelines
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          target_repo_ssh: 'git@github.com:bcgov/csit-developer-portal-poc.git'
+          ssh_key: ${{ secrets.CSIT_DEVELOPER_PORTAL_SSH_KEY }}
 
       - name: Show publish outputs
         shell: bash
@@ -27,3 +29,4 @@ jobs:
           echo "Version: ${{ steps.publish_plugins.outputs.version }}"
           echo "Plugin count: ${{ steps.publish_plugins.outputs.plugin_count }}"
           echo 'Published packages: ${{ steps.publish_plugins.outputs.published_package_versions }}'
+          echo 'Target repo status: ${{ steps.publish_plugins.outputs.target_repo_status }}'
