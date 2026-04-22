@@ -7,15 +7,16 @@ on:
       - feature/**
   workflow_dispatch:
 
-permissions:
-  contents: write
-  packages: write
-  id-token: write # Required for OIDC -- https://docs.npmjs.com/trusted-publishers
+
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write # Required for OIDC -- https://docs.npmjs.com/trusted-publishers
+      contents: write
+      packages: write
+      
     steps:
       - name: Publish Backstage plugins
         id: publish_plugins
