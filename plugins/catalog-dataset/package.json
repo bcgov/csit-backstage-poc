@@ -5,7 +5,7 @@
   "private": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/bcgov/csit-backstage-poc",
+    "url": "git+https://github.com/bcgov/csit-backstage-poc.git",
     "directory": "plugins/catalog-dataset"
   },
   "main": "src/index.ts",

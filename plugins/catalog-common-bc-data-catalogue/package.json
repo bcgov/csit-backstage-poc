@@ -6,7 +6,7 @@
   "description": "Common functionalities for the catalog-common-bc-data-catalogue plugin",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bcgov/csit-backstage-poc",
+    "url": "git+https://github.com/bcgov/csit-backstage-poc.git",
     "directory": "plugins/catalog-common-bc-data-catalogue"
   },
   "main": "src/index.ts",

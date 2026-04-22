@@ -6,7 +6,7 @@
   "description": "The bc-data-catalogue backend module for the catalog plugin.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bcgov/csit-backstage-poc",
+    "url": "git+https://github.com/bcgov/csit-backstage-poc.git",
     "directory": "plugins/catalog-backend-module-bc-data-catalogue"
   },
   "main": "src/index.ts",
