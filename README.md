@@ -38,7 +38,11 @@ Provides the frontend dataset page and related UI components for rendering `Data
 
 ## Prerequisites
 
-These packages are published to GitHub Packages and require authentication to install, even if the packages are public.
+These packages are published to both **npmjs.org** and **GitHub Packages**.
+
+If you are installing the packages from **npmjs.org**, no additional configuration or authentication is required.
+
+If you choose to pull from **GitHub Packages**, follow these steps to authenticate, as it is required even for public packages:
 
 ### 1. Create a GitHub Personal Access Token
 
@@ -58,7 +62,9 @@ export GITHUB_TOKEN=your_token_here
 
 ---
 
-## Configure Package Registry Access
+## Configure Package Registry Access (GitHub Packages Only)
+
+The following configuration is only required if you are pulling the packages from the GitHub registry instead of npmjs.org.
 
 ### `.npmrc`
 
@@ -76,7 +82,7 @@ npmScopes:
 
 npmRegistries:
   "https://npm.pkg.github.com":
-    npmAuthToken: "${GITHUB_TOKEN}"
+    npmAuthToken: "${GITHUB_TOKEN:-}"
 ```
 
 ---
