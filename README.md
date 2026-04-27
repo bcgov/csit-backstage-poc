@@ -38,7 +38,7 @@ Provides the frontend dataset page and related UI components for rendering `Data
 
 ## Prerequisites
 
-These packages are published to both **npmjs.org** and **GitHub Packages**.
+These packages are published to both **npmjs.org** and **GitHub Packages** using a [GitHub Actions workflow in the APS-DevOps repository](https://github.com/bcgov/aps-devops/blob/dev/publish-backstage-plugins/README.md).
 
 If you are installing the packages from **npmjs.org**, no additional configuration or authentication is required.
 
