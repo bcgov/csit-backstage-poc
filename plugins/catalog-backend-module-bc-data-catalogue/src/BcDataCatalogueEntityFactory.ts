@@ -1,7 +1,6 @@
 import {
   ApiEntity,
   Entity,
-  EntityLink,
   GroupEntity,
   SystemEntity,
   UserEntity,
@@ -11,12 +10,9 @@ import {
   UrlReaderService,
 } from '@backstage/backend-plugin-api';
 import {
-  DATASET_API_VERSION,
-  DATASET_KIND,
-  type DatasetAccessMethod,
+  parseOpenApiDocument,
   type DatasetEntity,
-  type DatasetSecurityClassification,
-  type DatasetStatus,
+  type OpenApiEntity,
 } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import type {
   BcDataCataloguePackage,
@@ -25,6 +21,12 @@ import type {
 } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import { BcDataCatalogueNaming } from './BcDataCatalogueNaming';
 import { BcDataCatalogueSchemaUtils } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import { ApiEntityBuilder } from './builders/ApiEntityBuilder';
+import { DatasetEntityBuilder } from './builders/DatasetEntityBuilder';
+import { GroupEntityBuilder } from './builders/GroupEntityBuilder';
+import { OpenApiEntityBuilder } from './builders/OpenApiEntityBuilder';
+import { SystemEntityBuilder } from './builders/SystemEntityBuilder';
+import { UserEntityBuilder } from './builders/UserEntityBuilder';
 
 type BcDataCatalogueEntityFactoryOptions = {
   reader: UrlReaderService;
@@ -32,10 +34,12 @@ type BcDataCatalogueEntityFactoryOptions = {
   allowedHosts: string[];
 };
 
-const MANAGED_BY_LOCATION =
-  'url:https://catalogue.data.gov.bc.ca/api/3/action/package_search';
-
-const GAP = 'GAP';
+type ApiResourceCandidate = {
+  apiResource: BcResource;
+  definitionUrl: string;
+  definitionHost?: string;
+  isOpenApiCandidate: boolean;
+};
 
 export class BcDataCatalogueEntityFactory {
   private readonly reader: UrlReaderService;
@@ -43,6 +47,12 @@ export class BcDataCatalogueEntityFactory {
   private readonly allowedHosts: string[];
   private readonly naming: BcDataCatalogueNaming;
   private readonly schemaUtils: BcDataCatalogueSchemaUtils;
+  private readonly apiEntityBuilder: ApiEntityBuilder;
+  private readonly datasetEntityBuilder: DatasetEntityBuilder;
+  private readonly groupEntityBuilder: GroupEntityBuilder;
+  private readonly openApiEntityBuilder: OpenApiEntityBuilder;
+  private readonly systemEntityBuilder: SystemEntityBuilder;
+  private readonly userEntityBuilder: UserEntityBuilder;
 
   constructor(options: BcDataCatalogueEntityFactoryOptions) {
     this.reader = options.reader;
@@ -50,6 +60,25 @@ export class BcDataCatalogueEntityFactory {
     this.allowedHosts = options.allowedHosts;
     this.naming = new BcDataCatalogueNaming();
     this.schemaUtils = new BcDataCatalogueSchemaUtils();
+    this.apiEntityBuilder = new ApiEntityBuilder({
+      naming: this.naming,
+    });
+    this.datasetEntityBuilder = new DatasetEntityBuilder({
+      naming: this.naming,
+      schemaUtils: this.schemaUtils,
+    });
+    this.groupEntityBuilder = new GroupEntityBuilder({
+      naming: this.naming,
+    });
+    this.openApiEntityBuilder = new OpenApiEntityBuilder({
+      naming: this.naming,
+    });
+    this.systemEntityBuilder = new SystemEntityBuilder({
+      naming: this.naming,
+    });
+    this.userEntityBuilder = new UserEntityBuilder({
+      naming: this.naming,
+    });
   }
 
   async createEntities(allPackages: BcDataCataloguePackage[]): Promise<Entity[]> {
@@ -62,7 +91,10 @@ export class BcDataCatalogueEntityFactory {
 
     allGroups.set(
       bcGovGroupId,
-      this.createGroupEntity('gov.bc.ca', 'Governent of British Columbia', undefined),
+      this.groupEntityBuilder.build({
+        hostName: 'gov.bc.ca',
+        displayName: 'Governent of British Columbia',
+      }),
     );
 
     const allOrganizations = new Map<string, BcOrganization>();
@@ -71,45 +103,27 @@ export class BcDataCatalogueEntityFactory {
     });
 
     const allSystems = new Map<string, SystemEntity>();
-    this.logger.info(`[BCDC Entity Factory] Organizations ${allOrganizations.size}`);
+    this.logger.info(
+      `[BCDC Entity Factory] Organizations ${allOrganizations.size}`,
+    );
     allOrganizations.forEach(organization => {
       const organizationGroupId = this.naming.getGroupId(organization.name);
 
       if (!allGroups.has(organizationGroupId)) {
         allGroups.set(
           organizationGroupId,
-          this.createGroupEntity(
-            organization.name,
-            organization.title,
-            bcGovGroupId,
-          ),
+          this.groupEntityBuilder.build({
+            hostName: organization.name,
+            displayName: organization.title,
+            parentGroup: bcGovGroupId,
+          }),
         );
       }
 
-      const systemEntity: SystemEntity = {
-        apiVersion: 'backstage.io/v1alpha1',
-        kind: 'System',
-        spec: {
-          owner: organizationGroupId,
-          type: 'government',
-        },
-        metadata: {
-          name: this.naming.toSafeName(organization.name),
-          title: organization.title,
-          description: organization.description,
-          annotations: {
-            'backstage.io/managed-by-location': MANAGED_BY_LOCATION,
-            'backstage.io/managed-by-origin-location': MANAGED_BY_LOCATION,
-
-            'bcdata.gov.bc.ca/organization-id': organization.id,
-            'bcdata.gov.bc.ca/organization-type': organization.type,
-            'bcdata.gov.bc.ca/organization-created': organization.created,
-            'bcdata.gov.bc.ca/organization-approval-status':
-              organization.approval_status,
-            'bcdata.gov.bc.ca/organization-state': organization.state,
-          },
-        },
-      };
+      const systemEntity = this.systemEntityBuilder.build({
+        organization,
+        ownerGroupId: organizationGroupId,
+      });
 
       allSystems.set(this.naming.getSystemId(organization.name), systemEntity);
     });
@@ -122,24 +136,7 @@ export class BcDataCatalogueEntityFactory {
         let user: UserEntity | undefined = allUsers.get(email);
 
         if (user === undefined) {
-          user = {
-            apiVersion: 'backstage.io/v1alpha1',
-            kind: 'User',
-            spec: {
-              profile: {
-                email,
-              },
-              memberOf: [],
-            },
-            metadata: {
-              name: this.naming.toSafeName(email),
-              annotations: {
-                'backstage.io/managed-by-location': MANAGED_BY_LOCATION,
-                'backstage.io/managed-by-origin-location': MANAGED_BY_LOCATION,
-              },
-            },
-          };
-
+          user = this.userEntityBuilder.build({ email });
           allUsers.set(this.naming.getUserId(email), user);
         }
 
@@ -159,7 +156,11 @@ export class BcDataCatalogueEntityFactory {
           let group = allGroups.get(groupId);
 
           if (group === undefined) {
-            group = this.createGroupEntity(hostName, hostName, bcGovGroupId);
+            group = this.groupEntityBuilder.build({
+              hostName,
+              displayName: hostName,
+              parentGroup: bcGovGroupId,
+            });
             allGroups.set(groupId, group);
           }
 
@@ -172,397 +173,197 @@ export class BcDataCatalogueEntityFactory {
 
     const allDatasets = new Map<string, DatasetEntity>();
     const allApis = new Map<string, ApiEntity>();
+    const allOpenApis = new Map<string, OpenApiEntity>();
+    const openApiDefinitionToId = new Map<string, string>();
 
     for (const pkg of allPackages) {
       const safeName = this.naming.toSafeName(pkg.name);
       const systemId = this.naming.getSystemId(pkg.organization.name);
       const ownerGroupId = this.naming.getGroupId(pkg.organization.name);
 
-      const learnMoreLinks: EntityLink[] = [];
-      const relatedResources: Array<{ url: string; title?: string }> = [];
-      const accessMethods: DatasetAccessMethod[] = [];
-      const apiResources: BcResource[] = [];
+      const apiResources: ApiResourceCandidate[] = [];
       const providesApis: string[] = [];
 
-      pkg.more_info?.forEach(moreInfo => {
-        if (moreInfo.url.length > 0) {
-          const entityLink: EntityLink = {
-            url: moreInfo.url,
-            title: moreInfo.description || moreInfo.url,
-            icon: 'externalLink',
-            type: 'more_info',
-          };
-
-          learnMoreLinks.push(entityLink);
-          relatedResources.push({
-            url: moreInfo.url,
-            title: moreInfo.description || moreInfo.url,
-          });
-        }
-      });
-
       pkg.resources?.forEach(resource => {
-        if (this.isApiResource(resource)) {
-          apiResources.push(resource);
-          return;
-        }
+        const apiResourceCandidate = this.getApiResourceCandidate(resource);
 
-        if (resource.bcdc_type === 'geographic') {
+        if (apiResourceCandidate) {
+          apiResources.push(apiResourceCandidate);
           return;
-        }
-
-        if (resource.url.length > 0) {
-          accessMethods.push(this.toDatasetAccessMethod(resource));
-          relatedResources.push({
-            url: resource.url,
-            title: resource.name,
-          });
-        } else {
-          this.logger.info(
-            `[BCDC Entity Factory] Missing URL ${resource.bcdc_type} ${resource.format} ${pkg.name}`,
-          );
         }
       });
 
-      const tags: string[] = [];
+      const bcdcDatasetUrl =`https://catalogue.data.gov.bc.ca/dataset/${pkg.name}`;
 
-      pkg.tags?.forEach(tag => {
-        tags.push(this.naming.toSafeName(tag.display_name));
+      const datasetEntity = this.datasetEntityBuilder.build({
+        pkg,
+        safeName,
+        ownerGroupId,
+        systemId,
+        providesApis,
+        bcdcDatasetUrl,
       });
-
-      const schema = this.schemaUtils.buildDatasetSchema(pkg.resources);
-      const tableCount = schema?.tables?.length ?? 0;
-
-      if (tableCount > 0) {
-        tags.push('has-schema');
-      } else {
-        tags.push('has-no-schema');
-      }
-
-      if (tableCount >= 2 && tableCount <= 5) {
-        tags.push('has-two-to-five-tables');
-      } else if (tableCount >= 6 && tableCount <= 10) {
-        tags.push('has-six-to-10-tables');
-      } else if (tableCount >= 11) {
-        tags.push('has-11-or-more-tables');
-      }
-
-      const datasetEntity: DatasetEntity = {
-        apiVersion: DATASET_API_VERSION,
-        kind: DATASET_KIND,
-        spec: {
-          owner: ownerGroupId,
-          system: systemId,
-          type: GAP+"<type>",
-
-          description: pkg.notes || 'No description available',
-          status: this.normalizeStatus(pkg.publish_state),
-          securityClassification: this.normalizeSecurityClassification(
-            pkg.security_class,
-          ),
-          connectedServicesDescription: GAP+"<connectedServicesDescription>",
-          updateFrequency: GAP+"<updateFrequency>",
-          providesApis,
-          accessMethods: accessMethods.length > 0 ? accessMethods : undefined,
-          schema,
-          quality: {
-            score: GAP+"<quality.score>",
-            validation: GAP+"<quality.validation>",
-            controls: [GAP+"<quality.controls>"],
-          },
-          governance: {
-            retention: GAP+"<governance.retention>",
-            description: GAP+"<governance.description>",
-          },
-          about: {
-            description: pkg.purpose || 'No description available',
-          },
-          authoritativeDesignation: {
-            authoritativeFor: GAP+"<authoritativeDesignation.authoritativeFor>",
-          },
-          lineage: {
-            sourceSystem: GAP+"<lineage.sourceSystem>",
-            transformation: pkg.lineage_statement || 'No transformation information available',
-            refresh: GAP+"<lineage.refresh>",
-          },
-          versioning: {
-            currentVersion: GAP+"<versioning.currentVersion>", // pkg.version is not populated for any of the 3000+ datasets
-            initialRelease: pkg.record_publish_date,
-            lastUpdated: pkg.record_last_modified,
-            description: GAP+"<versioning.description>",
-          },
-          support: {
-            description: pkg.organization.description,
-            dataCustodian: pkg.organization.title,
-            governanceAuthority: GAP+"<support.governanceAuthority>",
-            pathways: GAP+"<support.pathways>",
-            dataAndSemantics: {
-              description: GAP+"<support.dataAndSemantics.description>",
-              channel: GAP+"<support.dataAndSemantics.channel>",
-              responseTime: GAP+"<support.dataAndSemantics.responseTime>",
-              escalation: GAP+"<support.dataAndSemantics.escalation>",
-            },
-            accessAndIntegration: {
-              description: GAP+"<support.accessAndIntegration.description>",
-              channel: GAP+"<support.accessAndIntegration.channel>",
-              responseTime: GAP+"<support.accessAndIntegration.responseTime>",
-              escalation: GAP+"<support.accessAndIntegration.escalation>",
-            },
-            governanceAndProductionEscalation: {
-              description: GAP+"<support.governanceAndProductionEscalation.description>",
-              channel: GAP+"<support.governanceAndProductionEscalation.channel>",
-              referenceDataset: GAP+"<support.governanceAndProductionEscalation.referenceDataset>",
-              responseTime: GAP+"<support.governanceAndProductionEscalation.responseTime>",
-            },
-          },
-          relatedResources:
-            relatedResources.length > 0 ? relatedResources : undefined,
-        },
-        metadata: {
-          name: safeName,
-          title: pkg.title || pkg.name,
-          description: pkg.notes || 'No description available',
-          annotations: {
-            'backstage.io/managed-by-location': MANAGED_BY_LOCATION,
-            'backstage.io/managed-by-origin-location': MANAGED_BY_LOCATION,
-
-            'bcdata.gov.bc.ca/package-author': pkg.author || 'Unknown',
-            'bcdata.gov.bc.ca/package-author_email':
-              pkg.author_email || 'Unknown',
-            'bcdata.gov.bc.ca/package-creator_user_id': pkg.creator_user_id,
-            'bcdata.gov.bc.ca/package-download_audience': pkg.download_audience,
-            'bcdata.gov.bc.ca/package-id': pkg.id,
-            'bcdata.gov.bc.ca/package-isopen': `${pkg.isopen}`,
-            'bcdata.gov.bc.ca/package-license_id': pkg.license_id,
-            'bcdata.gov.bc.ca/package-license_title':
-              pkg.license_title || 'Unknown',
-            'bcdata.gov.bc.ca/package-license_url': pkg.license_url,
-            'bcdata.gov.bc.ca/package-maintainer': pkg.maintainer || 'Unknown',
-            'bcdata.gov.bc.ca/package-maintainer_email':
-              pkg.maintainer_email || 'Unknown',
-            'bcdata.gov.bc.ca/package-metadata_created': pkg.metadata_created,
-            'bcdata.gov.bc.ca/package-metadata_modified': pkg.metadata_modified,
-            'bcdata.gov.bc.ca/package-metadata_visibility':
-              pkg.metadata_visibility,
-            'bcdata.gov.bc.ca/package-name': pkg.name,
-            'bcdata.gov.bc.ca/package-notes': pkg.notes || 'Unknown',
-            'bcdata.gov.bc.ca/package-owner_org': pkg.owner_org,
-            'bcdata.gov.bc.ca/package-private': `${pkg.private}`,
-            'bcdata.gov.bc.ca/package-publish_state': pkg.publish_state,
-            'bcdata.gov.bc.ca/package-record_create_date':
-              pkg.record_create_date || 'Unknown',
-            'bcdata.gov.bc.ca/package-record_last_modified':
-              pkg.record_last_modified,
-            'bcdata.gov.bc.ca/package-record_publish_date':
-              pkg.record_publish_date,
-            'bcdata.gov.bc.ca/package-resource_status': pkg.resource_status,
-            'bcdata.gov.bc.ca/package-security_class': pkg.security_class,
-            'bcdata.gov.bc.ca/package-state': pkg.state,
-            'bcdata.gov.bc.ca/package-title': pkg.title || 'Unknown',
-            'bcdata.gov.bc.ca/package-type': pkg.type,
-            'bcdata.gov.bc.ca/package-url': pkg.url || 'Unknown',
-            'bcdata.gov.bc.ca/package-version': pkg.version || 'Unknown',
-            'bcdata.gov.bc.ca/package-view_audience': pkg.view_audience,
-          },
-          links: learnMoreLinks.length > 0 ? learnMoreLinks : undefined,
-          tags,
-        },
-      };
 
       allDatasets.set(this.naming.getComponentId(safeName), datasetEntity);
 
       let hasOpenApi = false;
 
-      for (const apiResource of apiResources) {
+      for (const candidate of apiResources) {
+        
+        const { apiResource, definitionUrl, definitionHost, isOpenApiCandidate } =
+          candidate;
         const name = apiResource.name;
-        let apiSafeName = this.naming.toSafeName(name);
 
-        if (
-          apiResource.bcdc_type === 'webservice' ||
-          apiResource.format === 'arcgis_rest'
-        ) {
-          const prefix =
-            apiResource.format === 'openapi-json' ? 'api' : apiResource.format;
-          const formatSafeName = this.naming.toSafeName(prefix);
-          const baseName = this.naming.toSafeName(`${formatSafeName}-${safeName}`);
-
-          let candidateName = baseName;
-          let candidateApiId = this.naming.getApiId(candidateName);
-
-          if (allApis.has(candidateApiId)) {
-            const distinguishingSuffix =
-              this.naming.extractDistinguishingSuffix(name);
-            const suffixWithSeparator = `-${distinguishingSuffix}`;
-            const maxBaseLength = 63 - suffixWithSeparator.length;
-
-            let truncatedBase = baseName;
-            if (baseName.length > maxBaseLength) {
-              truncatedBase = baseName
-                .slice(0, maxBaseLength)
-                .replace(/[-_.]+$/, '');
-            }
-
-            candidateName = this.naming.toSafeName(
-              `${truncatedBase}${suffixWithSeparator}`,
-            );
-            candidateApiId = this.naming.getApiId(candidateName);
-
-            let counter = 1;
-            while (allApis.has(candidateApiId)) {
-              const counterSuffix = `-${counter}`;
-              const maxBaseWithCounter =
-                63 - suffixWithSeparator.length - counterSuffix.length;
-
-              let truncatedBaseForCounter = baseName;
-              if (baseName.length > maxBaseWithCounter) {
-                truncatedBaseForCounter = baseName
-                  .slice(0, maxBaseWithCounter)
-                  .replace(/[-_.]+$/, '');
-              }
-
-              candidateName = this.naming.toSafeName(
-                `${truncatedBaseForCounter}${suffixWithSeparator}${counterSuffix}`,
-              );
-              candidateApiId = this.naming.getApiId(candidateName);
-              counter++;
-            }
-          }
-
-          apiSafeName = candidateName;
-        }
-
-        const definition = apiResource.url;
-        const url = new URL(definition);
-        const host = url.host.toLowerCase();
-
-        if (!this.allowedHosts.includes(host)) {
+        if (definitionHost && !this.allowedHosts.includes(definitionHost)) {
           this.logger.warn(
-            `[BCDC Entity Factory] API definition host is NOT allowed: "${host}"`,
+            `[BCDC Entity Factory] API definition host is NOT allowed: "${definitionHost}"`,
           );
         }
 
-        const apiEntityLinks: EntityLink[] = [];
+        let definitionContent = definitionUrl;
+        let isOpenApiResource = false;
 
-        if (apiResource.url && apiResource.url.length > 0) {
-          const apiEntityLink: EntityLink = {
-            url: apiResource.url,
-            title: apiResource.name,
-            icon: 'api',
-            type: apiResource.bcdc_type,
-          };
+        if (isOpenApiCandidate) {
+          const fetchedDefinition = await this.tryReadDefinition(definitionUrl);
 
-          apiEntityLinks.push(apiEntityLink);
+          if (fetchedDefinition !== undefined) {
+            definitionContent = fetchedDefinition;
+            isOpenApiResource =
+              (await parseOpenApiDocument(fetchedDefinition)) !== undefined;
+          }
+
+          if (isOpenApiResource) {
+            hasOpenApi = true;
+          }
         }
 
-        let definitionContent: string = apiResource.url;
-        if (apiResource.format === 'openapi-json') {
-          hasOpenApi = true;
+        const bcdcDatasetResourceUrl =`${bcdcDatasetUrl}/resource/${apiResource.id}`;
 
-          try {
-            const response = await this.reader.readUrl(apiResource.url);
-            const content = (await response.buffer()).toString();
-            definitionContent = content;
-          } catch (error) {
+        if (isOpenApiResource) {
+          const normalizedDefinitionUrl =
+            this.normalizeOpenApiDefinitionUrl(definitionUrl);
+          const existingOpenApiId =
+            openApiDefinitionToId.get(normalizedDefinitionUrl);
+
+          if (existingOpenApiId) {
+            const existingOpenApi = allOpenApis.get(existingOpenApiId)!;
+
             this.logger.warn(
-              `[BCDC Entity Factory] Failed to fetch OpenAPI definition from ${apiResource.url}: ${error}`,
+              '[BCDC Entity Factory] ' +
+                `Duplicate OpenApi definition detected for "${normalizedDefinitionUrl}". ` +
+                `Existing OpenApi: name="${existingOpenApi.metadata.name}", ` +
+                `owner="${existingOpenApi.spec.owner}", ` +
+                `system="${existingOpenApi.spec.system ?? ''}", ` +
+                `bcdc_type="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-bcdc_type']}", ` +
+                `format="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
+                `resource-url="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}", ` +
+                `openapi-url="${normalizedDefinitionUrl}". ` +
+                `New OpenApi resource: name="${apiResource.name}", ` +
+                `owner="${ownerGroupId}", ` +
+                `system="${systemId}", ` +
+                `bcdc_type="${apiResource.bcdc_type}", ` +
+                `format="${apiResource.format}", ` +
+                `resource-url="${apiResource.url}", ` +
+                `openapi-url="${normalizedDefinitionUrl}". ` +
+                `Reusing existing OpenApi entity.`,
             );
-            definitionContent = apiResource.url;
+
+            if (!datasetEntity.spec.providesApis?.includes(existingOpenApiId)) {
+              datasetEntity.spec.providesApis?.push(existingOpenApiId);
+            }
+
+            continue;
           }
-        }
 
-        const apiEntity: ApiEntity = {
-          apiVersion: 'backstage.io/v1alpha1',
-          kind: 'API',
-          spec: {
-            type:
-              apiResource.format === 'openapi-json'
-                ? 'openapi'
-                : apiResource.bcdc_type,
-            lifecycle: 'production',
-            owner: ownerGroupId,
-            definition: definitionContent,
-            system: systemId,
-          },
-          metadata: {
-            name: apiSafeName,
-            description: apiResource.description || 'No description available',
-            links: apiEntityLinks,
-            tags: [this.naming.toSafeName(apiResource.format)],
-            annotations: {
-              'backstage.io/managed-by-location': MANAGED_BY_LOCATION,
-              'backstage.io/managed-by-origin-location': MANAGED_BY_LOCATION,
-
-              'bcdata.gov.bc.ca/resource-bcdc_type': apiResource.bcdc_type,
-              'bcdata.gov.bc.ca/resource-cache_last_updated':
-                apiResource.cache_last_updated || 'Undefined',
-              'bcdata.gov.bc.ca/resource-cache_url':
-                apiResource.cache_url || 'Undefined',
-              'bcdata.gov.bc.ca/resource-created': apiResource.created,
-              'bcdata.gov.bc.ca/resource-datastore_active': `${apiResource.datastore_active}`,
-              'bcdata.gov.bc.ca/resource-description':
-                apiResource.description || 'Undefined',
-              'bcdata.gov.bc.ca/resource-format': apiResource.format,
-              'bcdata.gov.bc.ca/resource-hash': apiResource.hash,
-              'bcdata.gov.bc.ca/resource-id': apiResource.id,
-              'bcdata.gov.bc.ca/resource-metadata_modified':
-                apiResource.metadata_modified,
-              'bcdata.gov.bc.ca/resource-mimetype':
-                apiResource.mimetype || 'Undefined',
-              'bcdata.gov.bc.ca/resource-name': apiResource.name,
-              'bcdata.gov.bc.ca/resource-package_id': apiResource.package_id,
-              'bcdata.gov.bc.ca/resource-position': `${apiResource.position}`,
-              'bcdata.gov.bc.ca/resource-projection_name':
-                apiResource.projection_name || 'Undefined',
-              'bcdata.gov.bc.ca/resource-resource_access_method':
-                apiResource.resource_access_method,
-              'bcdata.gov.bc.ca/resource-resource_storage_location':
-                apiResource.resource_storage_location,
-              'bcdata.gov.bc.ca/resource-resource_type':
-                apiResource.resource_type,
-              'bcdata.gov.bc.ca/resource-resource_update_cycle':
-                apiResource.resource_update_cycle,
-              'bcdata.gov.bc.ca/resource-size': `${apiResource.size}`,
-              'bcdata.gov.bc.ca/resource-spatial_datatype':
-                apiResource.spatial_datatype || 'Undefined',
-              'bcdata.gov.bc.ca/resource-state': apiResource.state,
-              'bcdata.gov.bc.ca/resource-url': apiResource.url,
-              'bcdata.gov.bc.ca/resource-url_type':
-                apiResource.url_type || 'Undefined',
-            },
-          },
-        };
-
-        const apiId = this.naming.getApiId(apiSafeName);
-
-        if (allApis.has(apiId)) {
-          const existingApi = allApis.get(apiId)!;
-          this.logger.warn(
-            '[BCDC Entity Factory] ' +
-              `Duplicate API name detected: "${apiSafeName}" (ID: ${apiId}). ` +
-              `Existing API: name="${existingApi.metadata.name}", ` +
-              `Format: "${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
-              `resource-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-id']}", ` +
-              `package-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-package_id']}", ` +
-              `url="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}". ` +
-              `New API: name="${apiEntity.metadata.name}", ` +
-              `resource-id="${apiResource.id}", ` +
-              `package-id="${apiResource.package_id}", ` +
-              `url="${apiResource.url}". ` +
-              `The new API will overwrite the existing one.`,
+          const openApiSafeName = this.buildOpenApiSafeName(
+            name,
+            definitionHost,
+            allOpenApis,
           );
+          const openApiId = this.naming.getOpenApiId(openApiSafeName);
+
+          const openApiEntity = await this.openApiEntityBuilder.build({
+            pkg,
+            apiResource,
+            ownerGroupId,
+            systemId,
+            openApiSafeName,
+            datasetEntityRef: this.naming.getDatasetId(safeName),
+            definitionUrl,
+            definition: definitionContent,
+            bcdcDatasetResourceUrl,
+          });
+
+          allOpenApis.set(openApiId, openApiEntity);
+          openApiDefinitionToId.set(normalizedDefinitionUrl, openApiId);
+          datasetEntity.spec.providesApis?.push(openApiId);
+          continue;
         }
+
+        const apiSafeName = this.buildApiSafeName(name, definitionHost);
+        const apiId = this.naming.getApiId(apiSafeName);
+        const existingApi = allApis.get(apiId);
+        const expectedApiType = apiResource.bcdc_type;
+
+        if (existingApi) {
+          if (
+            existingApi.spec.type !== expectedApiType ||
+            existingApi.spec.owner !== ownerGroupId ||
+            existingApi.spec.system !== systemId
+          ) {
+            this.logger.warn(
+              '[BCDC Entity Factory] ' +
+                `Duplicate API identity detected for "${apiSafeName}" (ID: ${apiId}). ` +
+                `Existing API: type="${existingApi.spec.type}", owner="${existingApi.spec.owner}", system="${existingApi.spec.system ?? ''}", ` +
+                `bcdc_type="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-bcdc_type']}", ` +
+                `format="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
+                `resource-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-id']}", ` +
+                `package-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-package_id']}", ` +
+                `url="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}". ` +
+                `New API: type="${expectedApiType}", owner="${ownerGroupId}", system="${systemId}", ` +
+                `bcdc_type="${apiResource.bcdc_type}", ` +
+                `format="${apiResource.format}", ` +
+                `resource-id="${apiResource.id}", ` +
+                `package-id="${apiResource.package_id}", ` +
+                `url="${apiResource.url}". ` +
+                `Reusing existing API entity.`,
+            );
+          }
+
+          if (!datasetEntity.spec.providesApis?.includes(apiId)) {
+            datasetEntity.spec.providesApis?.push(apiId);
+          }
+
+          continue;
+        }
+
+        const apiEntity = this.apiEntityBuilder.build({
+          apiResource,
+          ownerGroupId,
+          systemId,
+          apiSafeName,
+          definition: definitionContent,
+          apiType: expectedApiType,
+          bcdcDatasetResourceUrl,
+        });
 
         allApis.set(apiId, apiEntity);
         datasetEntity.spec.providesApis?.push(apiId);
       }
 
       if (datasetEntity.spec.providesApis?.length) {
-        if (!tags.includes('has-api')) {
-          tags.push('has-api');
+        if (!datasetEntity.metadata.tags?.includes('has-api')) {
+          datasetEntity.metadata.tags = [
+            ...(datasetEntity.metadata.tags ?? []),
+            'has-api',
+          ];
         }
 
-        if (hasOpenApi && !tags.includes('has-openapi')) {
-          tags.push('has-openapi');
+        if (hasOpenApi && !datasetEntity.metadata.tags?.includes('has-openapi')) {
+          datasetEntity.metadata.tags = [
+            ...(datasetEntity.metadata.tags ?? []),
+            'has-openapi',
+          ];
         }
       }
     }
@@ -572,94 +373,189 @@ export class BcDataCatalogueEntityFactory {
     const systemEntities: SystemEntity[] = Array.from(allSystems.values());
     const datasetEntities: DatasetEntity[] = Array.from(allDatasets.values());
     const apiEntities: ApiEntity[] = Array.from(allApis.values());
+    const openApiEntities: OpenApiEntity[] = Array.from(allOpenApis.values());
 
     allEntities.push(...userEntities);
     allEntities.push(...groupEntities);
     allEntities.push(...systemEntities);
     allEntities.push(...datasetEntities);
     allEntities.push(...apiEntities);
+    allEntities.push(...openApiEntities);
 
-    this.logger.info(`[BCDC Entity Factory] >createEntities ${allEntities.length}`);
+    this.logger.info(
+      `[BCDC Entity Factory] >createEntities ${allEntities.length}`,
+    );
     return allEntities;
   }
 
-  private isApiResource(resource: BcResource): boolean {
-    return (
-      (resource.bcdc_type === 'webservice' && resource.format !== 'kml') ||
-      resource.format === 'arcgis_rest' ||
-      resource.format === 'openapi-json'
+  private buildOpenApiSafeName(
+    resourceName: string,
+    host: string | undefined,
+    allOpenApis: Map<string, OpenApiEntity>,
+  ): string {
+    const baseName = host
+      ? this.naming.toSafeName(`${resourceName}-${host}`)
+      : this.naming.toSafeName(resourceName);
+
+    let candidateName = baseName;
+    let candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+
+    if (!allOpenApis.has(candidateOpenApiId)) {
+      return candidateName;
+    }
+
+    const distinguishingSuffix =
+      host && host.length > 0
+        ? this.naming.toSafeName(host)
+        : this.naming.extractDistinguishingSuffix(resourceName);
+
+    const suffixWithSeparator = `-${distinguishingSuffix}`;
+    const maxBaseLength = 63 - suffixWithSeparator.length;
+
+    let truncatedBase = baseName;
+    if (baseName.length > maxBaseLength) {
+      truncatedBase = baseName.slice(0, maxBaseLength).replace(/[-_.]+$/, '');
+    }
+
+    candidateName = this.naming.toSafeName(
+      `${truncatedBase}${suffixWithSeparator}`,
     );
+    candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+
+    let counter = 1;
+    while (allOpenApis.has(candidateOpenApiId)) {
+      const counterSuffix = `-${counter}`;
+      const maxBaseWithCounter =
+        63 - suffixWithSeparator.length - counterSuffix.length;
+
+      let truncatedBaseForCounter = baseName;
+      if (baseName.length > maxBaseWithCounter) {
+        truncatedBaseForCounter = baseName
+          .slice(0, maxBaseWithCounter)
+          .replace(/[-_.]+$/, '');
+      }
+
+      candidateName = this.naming.toSafeName(
+        `${truncatedBaseForCounter}${suffixWithSeparator}${counterSuffix}`,
+      );
+      candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+      counter++;
+    }
+
+    return candidateName;
   }
 
-  private toDatasetAccessMethod(resource: BcResource): DatasetAccessMethod {
+  private buildApiSafeName(resourceName: string, host?: string): string {
+    return host
+      ? this.naming.toSafeName(`${resourceName}-${host}`)
+      : this.naming.toSafeName(resourceName);
+  }
+
+  private getApiResourceCandidate(
+    resource: BcResource,
+  ): ApiResourceCandidate | undefined {
+    const definitionUrl = this.getDefinitionUrl(resource.url);
+    if (!definitionUrl) {
+      return undefined;
+    }
+
+    const definitionHost = this.getUrlHost(definitionUrl);
+
+    const isOpenApiCandidate =
+      resource.format === 'openapi-json' ||
+      (resource.bcdc_type === 'webservice' &&
+        ['json', 'xml', 'html'].includes(resource.format) &&
+        this.looksLikeOpenApiUrl(resource.url, definitionUrl));
+
+    if (isOpenApiCandidate) {
+      return {
+        apiResource: resource,
+        definitionUrl,
+        definitionHost,
+        isOpenApiCandidate: true,
+      };
+    }
+
+    if (resource.bcdc_type !== 'webservice') {
+      return undefined;
+    }
+
+    if (['kml', 'wms', 'arcgis_rest', 'xml'].includes(resource.format)) {
+      return undefined;
+    }
+
     return {
-      id: resource.id,
-      title: resource.name,
-      description: resource.description,
-      url: resource.url,
-      type: resource.bcdc_type,
-      format: resource.format,
-      updateFrequency: resource.resource_update_cycle,
+      apiResource: resource,
+      definitionUrl,
+      definitionHost,
+      isOpenApiCandidate: false,
     };
   }
 
-  private normalizeStatus(publishState: string): DatasetStatus {
-    switch (publishState.trim().toUpperCase()) {
-      case 'PUBLISHED':
-        return 'Published';
-      case 'PENDING ARCHIVE':
-        return 'Pending Archive';
-      default:
-        return 'Unknown';
+  private getDefinitionUrl(resourceUrl: string): string | undefined {
+    const trimmedUrl = resourceUrl?.trim();
+    if (!trimmedUrl) {
+      return undefined;
+    }
+
+    try {
+      const parsedUrl = new URL(trimmedUrl);
+      const nestedUrl = parsedUrl.searchParams.get('url')?.trim();
+
+      if (nestedUrl) {
+        return nestedUrl;
+      }
+
+      return trimmedUrl;
+    } catch {
+      return undefined;
     }
   }
 
-  private normalizeSecurityClassification(
-    securityClass: string,
-  ): DatasetSecurityClassification {
-    switch (securityClass.trim().toUpperCase()) {
-      case 'PUBLIC':
-        return 'Public';
-      case 'PROTECTED A':
-        return 'Protected A';
-      case 'PROTECTED B':
-        return 'Protected B';
-      case 'PROTECTED C':
-        return 'Protected C';
-      default:
-        return 'Unknown';
+  private getUrlHost(url: string): string | undefined {
+    try {
+      return new URL(url).host.toLowerCase();
+    } catch {
+      return undefined;
+    }
+  }
+
+  private normalizeOpenApiDefinitionUrl(url: string): string {
+    return url.trim().toLowerCase();
+  }
+
+  private looksLikeOpenApiUrl(
+    resourceUrl: string,
+    definitionUrl: string,
+  ): boolean {
+    const raw = resourceUrl.toLowerCase();
+    const normalized = definitionUrl.toLowerCase();
+
+    if (raw.includes('oas-editor.apps.gov.bc.ca/?url=')) {
+      return true;
+    }
+
+    return (
+      normalized.includes('openapi') ||
+      normalized.includes('swagger') ||
+      normalized.includes('/api-specs/')
+    );
+  }
+
+  private async tryReadDefinition(url: string): Promise<string | undefined> {
+    try {
+      const response = await this.reader.readUrl(url);
+      return (await response.buffer()).toString();
+    } catch (error) {
+      this.logger.warn(
+        `[BCDC Entity Factory] Failed to fetch API definition from ${url}: ${error}`,
+      );
+      return undefined;
     }
   }
 
   private getEmailHostname(email: string): string | undefined {
     const match = email.trim().toLowerCase().match(/@([\w.-]+)/);
     return match ? match[1] : undefined;
-  }
-
-  private createGroupEntity(
-    hostName: string,
-    displayName: string,
-    parentGroup?: string,
-  ): GroupEntity {
-    return {
-      apiVersion: 'backstage.io/v1alpha1',
-      kind: 'Group',
-      metadata: {
-        name: this.naming.toSafeName(hostName),
-        annotations: {
-          'backstage.io/managed-by-location': MANAGED_BY_LOCATION,
-          'backstage.io/managed-by-origin-location': MANAGED_BY_LOCATION,
-        },
-      },
-      spec: {
-        type: 'government',
-        profile: {
-          displayName,
-        },
-        parent: parentGroup,
-        children: [],
-        members: [],
-      },
-    };
   }
 }

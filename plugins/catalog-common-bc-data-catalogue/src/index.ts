@@ -1,4 +1,5 @@
 export * from './model/DatasetEntity';
+export * from './model/OpenApiEntity';
 export { BcDataCataloguePackageSchema } from './model/BcDataCatalogueModel';
 export type {
   BcDataCataloguePackage,

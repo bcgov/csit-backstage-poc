@@ -6232,6 +6232,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@bcgov/plugin-catalog-openapi@workspace:^, @bcgov/plugin-catalog-openapi@workspace:plugins/catalog-openapi":
+  version: 0.0.0-use.local
+  resolution: "@bcgov/plugin-catalog-openapi@workspace:plugins/catalog-openapi"
+  dependencies:
+    "@backstage/cli": "npm:^0.33.0"
+    "@backstage/core-app-api": "npm:^1.17.1"
+    "@backstage/core-components": "npm:^0.17.3"
+    "@backstage/core-plugin-api": "npm:^1.10.9"
+    "@backstage/dev-utils": "npm:^1.1.12"
+    "@backstage/test-utils": "npm:^1.7.9"
+    "@backstage/theme": "npm:^0.6.6"
+    "@bcgov/plugin-catalog-common-bc-data-catalogue": "workspace:*"
+    "@material-ui/core": "npm:^4.9.13"
+    "@material-ui/icons": "npm:^4.9.1"
+    "@material-ui/lab": "npm:^4.0.0-alpha.61"
+    "@testing-library/jest-dom": "npm:^6.0.0"
+    "@testing-library/react": "npm:^14.0.0"
+    "@testing-library/user-event": "npm:^14.0.0"
+    msw: "npm:^1.0.0"
+    react: "npm:^16.13.1 || ^17.0.0 || ^18.0.0"
+    react-use: "npm:^17.2.4"
+  peerDependencies:
+    react: ^16.13.1 || ^17.0.0 || ^18.0.0
+  languageName: unknown
+  linkType: soft
+
 "@bcoe/v8-coverage@npm:^0.2.3":
   version: 0.2.3
   resolution: "@bcoe/v8-coverage@npm:0.2.3"
@@ -18275,6 +18301,7 @@ __metadata:
     "@backstage/test-utils": "npm:^1.7.9"
     "@backstage/theme": "npm:^0.6.6"
     "@bcgov/plugin-catalog-dataset": "workspace:^"
+    "@bcgov/plugin-catalog-openapi": "workspace:^"
     "@material-ui/core": "npm:^4.12.2"
     "@material-ui/icons": "npm:^4.9.1"
     "@playwright/test": "npm:^1.32.3"

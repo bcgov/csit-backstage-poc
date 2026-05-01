@@ -2,12 +2,10 @@ import {
   Entity,
   RELATION_OWNED_BY,
   RELATION_OWNER_OF,
-  RELATION_API_PROVIDED_BY,
-  RELATION_PROVIDES_API,
   RELATION_PART_OF,
   RELATION_HAS_PART,
   parseEntityRef,
-  getCompoundEntityRef
+  getCompoundEntityRef,
 } from '@backstage/catalog-model';
 import {
   CatalogProcessor,
@@ -15,20 +13,20 @@ import {
   processingResult,
 } from '@backstage/plugin-catalog-node';
 import {
-  DATASET_API_VERSION,
-  DATASET_KIND,
-  type DatasetEntity,
+  OPENAPI_API_VERSION,
+  OPENAPI_KIND,
+  type OpenApiEntity,
 } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
-export class BcDataCatalogueDatasetProcessor implements CatalogProcessor {
+export class BcDataCatalogueOpenApiProcessor implements CatalogProcessor {
   getProcessorName(): string {
-    return 'BcDataCatalogueDatasetProcessor';
+    return 'BcDataCatalogueOpenApiProcessor';
   }
 
   async validateEntityKind(entity: Entity): Promise<boolean> {
     return (
-      entity.apiVersion === DATASET_API_VERSION &&
-      entity.kind === DATASET_KIND
+      entity.apiVersion === OPENAPI_API_VERSION &&
+      entity.kind === OPENAPI_KIND
     );
   }
 
@@ -75,21 +73,15 @@ export class BcDataCatalogueDatasetProcessor implements CatalogProcessor {
       }
     }
 
-    const dataset = entity as DatasetEntity;
+    const openApi = entity as OpenApiEntity;
     doEmit(
-      dataset.spec.owner,
+      openApi.spec.owner,
       { defaultKind: 'Group', defaultNamespace: selfRef.namespace },
       RELATION_OWNED_BY,
       RELATION_OWNER_OF,
     );
     doEmit(
-      dataset.spec.providesApis,
-      { defaultKind: 'API', defaultNamespace: selfRef.namespace },
-      RELATION_PROVIDES_API,
-      RELATION_API_PROVIDED_BY,
-    );
-    doEmit(
-      dataset.spec.system,
+      openApi.spec.system,
       { defaultKind: 'System', defaultNamespace: selfRef.namespace },
       RELATION_PART_OF,
       RELATION_HAS_PART,

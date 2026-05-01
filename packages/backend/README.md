@@ -12,6 +12,12 @@ app. Until then, feel free to experiment here!
 
 ## Development
 
+Switches you active Node.js version in the current shell to v20.20.0.
+
+```bash
+nvm use 20.20.0
+```
+
 To run the example backend, first go to the project root and run
 
 ```bash

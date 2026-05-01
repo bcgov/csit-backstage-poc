@@ -1,0 +1,1 @@
+export { CatalogOpenApiPage } from './CatalogOpenApiPage';
