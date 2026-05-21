@@ -1,6 +1,6 @@
 {
   "name": "root",
-  "version": "0.2.5",
+  "version": "0.2.10",
   "private": true,
   "engines": {
     "node": "20 || 22"
@@ -9,7 +9,8 @@
     "pluginPackages": [
       "@bcgov/plugin-catalog-backend-module-bc-data-catalogue",
       "@bcgov/plugin-catalog-common-bc-data-catalogue",
-      "@bcgov/plugin-catalog-dataset"
+      "@bcgov/plugin-catalog-dataset",
+      "@bcgov/plugin-catalog-openapi"
     ]
   },
   "scripts": {
