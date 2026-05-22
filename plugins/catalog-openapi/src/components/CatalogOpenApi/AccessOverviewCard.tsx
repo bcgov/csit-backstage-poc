@@ -1,15 +1,22 @@
-import { Card, CardContent, Button, Grid, Typography, Link } from '@material-ui/core';
-import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import {
+  Card,
+  CardContent,
+  Button,
+  Grid,
+  Typography,
+  Link,
+} from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
+import type { OpenApiEntity, OpenApiEnvironment } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 const renderValue = (value?: string) =>
   value && value.trim() !== '' ? value : '—';
 
-const formatEnvironments = (environments?: OpenApiEntity['spec']['environments']) => {
+const formatEnvironments = (environments?: OpenApiEnvironment[]) => {
   if (!environments?.length) {
     return '—';
   }
@@ -24,9 +31,7 @@ const formatEnvironments = (environments?: OpenApiEntity['spec']['environments']
 const renderMetadataRow = (label: string, value: string) => (
   <Grid container spacing={1}>
     <Grid item xs={6}>
-      <Typography variant="body2">
-        {label}
-      </Typography>
+      <Typography variant="body2">{label}</Typography>
     </Grid>
     <Grid item xs={6}>
       <Typography variant="body2" align="right">
@@ -36,22 +41,33 @@ const renderMetadataRow = (label: string, value: string) => (
   </Grid>
 );
 
-export const AccessOverviewCard = ({ spec }: Props) => {
+export const AccessOverviewCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
   return (
     <Card>
       <CardContent>
         <Grid container spacing={2} alignItems="flex-start">
           <Grid item xs={12} md={6}>
-            {renderMetadataRow('Provider Ministry:', renderValue(spec.providerMinistry))}
-            {renderMetadataRow('Status:', renderValue(spec.status))}
+            {renderMetadataRow(
+              'Provider Ministry:',
+              renderValue(bcdc?.providerMinistry),
+            )}
+            {renderMetadataRow('Status:', renderValue(bcdc?.status))}
             {renderMetadataRow(
               'Security Classification:',
-              renderValue(spec.securityClassification),
+              renderValue(bcdc?.securityClassification),
             )}
-            {renderMetadataRow('Application:', renderValue(spec.application))}
-            {renderMetadataRow('Type:', renderValue(spec.type))}
-            {renderMetadataRow('SDX Required:', renderValue(spec.sdxRequired))}
-            {renderMetadataRow('Environments:', formatEnvironments(spec.environments))}
+            {renderMetadataRow('Application:', renderValue(bcdc?.application))}
+            {renderMetadataRow('Type:', renderValue(entity.spec.type))}
+            {renderMetadataRow(
+              'SDX Required:',
+              renderValue(bcdc?.sdxRequired),
+            )}
+            {renderMetadataRow(
+              'Environments:',
+              formatEnvironments(bcdc?.environments),
+            )}
 
             <Typography
               variant="body2"
@@ -60,11 +76,9 @@ export const AccessOverviewCard = ({ spec }: Props) => {
               --------------------
             </Typography>
 
+            <Typography variant="body2">Access Model:</Typography>
             <Typography variant="body2">
-              Access Model:
-            </Typography>
-            <Typography variant="body2">
-              {renderValue(spec.accessModel)}
+              {renderValue(bcdc?.accessModel)}
             </Typography>
           </Grid>
 
@@ -91,33 +105,44 @@ export const AccessOverviewCard = ({ spec }: Props) => {
               <Typography variant="body2">
                 <strong>Technical documentation</strong>
               </Typography>
+
               <Typography variant="body2">
-                <Link
-                  href={spec.urls.openapiSpecUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View OpenAPI spec
-                </Link>
+                {bcdc?.urls?.openapiSpecUrl ? (
+                  <Link
+                    href={bcdc.urls.openapiSpecUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View OpenAPI spec
+                  </Link>
+                ) : (
+                  '—'
+                )}
               </Typography>
+
               <Typography variant="body2">
-                {spec.dataSource?.dataset ? (
+                {bcdc?.dataSource?.dataset ? (
                   <EntityRefLink
-                    entityRef={spec.dataSource.dataset}
-                    title={`View authoritative dataset (${spec.dataSource.dataset})`}
+                    entityRef={bcdc.dataSource.dataset}
+                    title={`View authoritative dataset (${bcdc.dataSource.dataset})`}
                   />
                 ) : (
                   '—'
                 )}
               </Typography>
+
               <Typography variant="body2">
-                <Link
-                  href={spec.urls.bcdcDatasetResourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View in BC Data Catalogue
-                </Link>
+                {bcdc?.urls?.bcdcDatasetResourceUrl ? (
+                  <Link
+                    href={bcdc.urls.bcdcDatasetResourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View in BC Data Catalogue
+                  </Link>
+                ) : (
+                  '—'
+                )}
               </Typography>
 
               <Typography

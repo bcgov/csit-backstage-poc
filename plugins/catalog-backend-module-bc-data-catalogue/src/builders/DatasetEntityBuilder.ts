@@ -24,6 +24,8 @@ type BuildDatasetEntityOptions = {
   ownerGroupId: string;
   systemId: string;
   providesApis: string[];
+  promotedApiResourceIds: Set<string>;
+  accessMethodEntityRefs: Map<string, string>;
   bcdcDatasetUrl: string;
 };
 
@@ -37,11 +39,27 @@ export class DatasetEntityBuilder {
   }
 
   build(options: BuildDatasetEntityOptions): DatasetEntity {
-    const { pkg, safeName, ownerGroupId, systemId, providesApis, bcdcDatasetUrl } = options;
+    const {
+      pkg,
+      safeName,
+      ownerGroupId,
+      systemId,
+      providesApis,
+      promotedApiResourceIds,
+      accessMethodEntityRefs,
+      bcdcDatasetUrl,
+    } = options;
 
     const learnMoreLinks = this.buildLearnMoreLinks(pkg, bcdcDatasetUrl);
-    const relatedResources = this.buildRelatedResources(pkg);
-    const accessMethods = this.buildAccessMethods(pkg);
+    const relatedResources = this.buildRelatedResources(
+      pkg,
+      promotedApiResourceIds,
+    );
+    const accessMethods = this.buildAccessMethods(
+      pkg,
+      promotedApiResourceIds,
+      accessMethodEntityRefs,
+    );
     const schema = this.schemaUtils.buildDatasetSchema(pkg.resources);
     const normalizedTags = this.buildTags(pkg, schema?.tables?.length ?? 0);
     const managedByLocation = `url:${bcdcDatasetUrl}`;
@@ -53,7 +71,6 @@ export class DatasetEntityBuilder {
         owner: ownerGroupId,
         system: systemId,
         type: GAP + '<type>',
-
         description: pkg.notes || 'No description available',
         status: this.normalizeStatus(pkg.publish_state),
         securityClassification: this.normalizeSecurityClassification(
@@ -77,7 +94,8 @@ export class DatasetEntityBuilder {
           description: pkg.purpose || 'No description available',
         },
         authoritativeDesignation: {
-          authoritativeFor: GAP + '<authoritativeDesignation.authoritativeFor>',
+          authoritativeFor:
+            GAP + '<authoritativeDesignation.authoritativeFor>',
         },
         lineage: {
           sourceSystem: GAP + '<lineage.sourceSystem>',
@@ -112,12 +130,14 @@ export class DatasetEntityBuilder {
             description:
               GAP +
               '<support.governanceAndProductionEscalation.description>',
-            channel: GAP + '<support.governanceAndProductionEscalation.channel>',
+            channel:
+              GAP + '<support.governanceAndProductionEscalation.channel>',
             referenceDataset:
               GAP +
               '<support.governanceAndProductionEscalation.referenceDataset>',
             responseTime:
-              GAP + '<support.governanceAndProductionEscalation.responseTime>',
+              GAP +
+              '<support.governanceAndProductionEscalation.responseTime>',
           },
         },
         relatedResources:
@@ -130,7 +150,7 @@ export class DatasetEntityBuilder {
         annotations: {
           'backstage.io/managed-by-location': managedByLocation,
           'backstage.io/managed-by-origin-location': managedByLocation,
-
+          'backstage.io/view-url': bcdcDatasetUrl,
           'bcdata.gov.bc.ca/package-author': pkg.author || 'Unknown',
           'bcdata.gov.bc.ca/package-author_email':
             pkg.author_email || 'Unknown',
@@ -142,7 +162,8 @@ export class DatasetEntityBuilder {
           'bcdata.gov.bc.ca/package-license_title':
             pkg.license_title || 'Unknown',
           'bcdata.gov.bc.ca/package-license_url': pkg.license_url,
-          'bcdata.gov.bc.ca/package-maintainer': pkg.maintainer || 'Unknown',
+          'bcdata.gov.bc.ca/package-maintainer':
+            pkg.maintainer || 'Unknown',
           'bcdata.gov.bc.ca/package-maintainer_email':
             pkg.maintainer_email || 'Unknown',
           'bcdata.gov.bc.ca/package-metadata_created': pkg.metadata_created,
@@ -175,7 +196,10 @@ export class DatasetEntityBuilder {
     };
   }
 
-  private buildLearnMoreLinks(pkg: BcDataCataloguePackage, bcdcDatasetUrl: string): EntityLink[] {
+  private buildLearnMoreLinks(
+    pkg: BcDataCataloguePackage,
+    bcdcDatasetUrl: string,
+  ): EntityLink[] {
     const learnMoreLinks: EntityLink[] = [
       {
         url: bcdcDatasetUrl,
@@ -201,6 +225,7 @@ export class DatasetEntityBuilder {
 
   private buildRelatedResources(
     pkg: BcDataCataloguePackage,
+    promotedApiResourceIds: Set<string>,
   ): Array<{ url: string; title?: string }> {
     const relatedResources: Array<{ url: string; title?: string }> = [];
 
@@ -214,6 +239,10 @@ export class DatasetEntityBuilder {
     });
 
     pkg.resources?.forEach(resource => {
+      if (promotedApiResourceIds.has(resource.id)) {
+        return;
+      }
+
       if (resource.bcdc_type === 'geographic') {
         return;
       }
@@ -231,11 +260,19 @@ export class DatasetEntityBuilder {
 
   private buildAccessMethods(
     pkg: BcDataCataloguePackage,
+    promotedApiResourceIds: Set<string>,
+    accessMethodEntityRefs: Map<string, string>,
   ): DatasetAccessMethod[] {
     const accessMethods: DatasetAccessMethod[] = [];
 
     pkg.resources?.forEach(resource => {
-      if (resource.bcdc_type === 'geographic') {
+      if (promotedApiResourceIds.has(resource.id)) {
+        return;
+      }
+
+      const entityRef = accessMethodEntityRefs.get(resource.id);
+
+      if (resource.bcdc_type === 'geographic' && !entityRef) {
         return;
       }
 
@@ -245,14 +282,23 @@ export class DatasetEntityBuilder {
           title: resource.name,
           description: resource.description,
           url: resource.url,
-          type: resource.bcdc_type,
+          type: entityRef
+            ? this.getEntityBackedAccessMethodType(entityRef)
+            : resource.bcdc_type,
           format: resource.format,
           updateFrequency: resource.resource_update_cycle,
+          ...(entityRef ? { entityRef } : {}),
         });
       }
     });
 
     return accessMethods;
+  }
+
+  private getEntityBackedAccessMethodType(entityRef: string): string {
+    return entityRef.startsWith('resource:')
+      ? 'spatial-resource'
+      : 'catalog-resource';
   }
 
   private buildTags(

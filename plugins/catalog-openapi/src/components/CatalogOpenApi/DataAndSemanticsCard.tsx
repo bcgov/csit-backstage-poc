@@ -1,16 +1,18 @@
 import { Card, CardContent, Grid, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { OpenApiEntity } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 const renderValue = (value?: string) =>
   value && value.trim() !== '' ? value : '—';
 
-export const DataAndSemanticsCard = ({ spec }: Props) => {
-  const dataAndSemantics = spec.dataAndSemantics;
+export const DataAndSemanticsCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const dataAndSemantics = bcdc?.dataAndSemantics;
   const schemas = dataAndSemantics?.dataReturned ?? [];
 
   return (
@@ -79,7 +81,8 @@ export const DataAndSemanticsCard = ({ spec }: Props) => {
                       spacing={1}
                       key={`${schema.name}-${field.name}`}
                       style={{
-                        backgroundColor: index % 2 === 0 ? '#ffffff' : '#f5f5f5',
+                        backgroundColor:
+                          index % 2 === 0 ? '#ffffff' : '#f5f5f5',
                         padding: '10px 12px',
                       }}
                     >
@@ -137,9 +140,7 @@ export const DataAndSemanticsCard = ({ spec }: Props) => {
         {dataAndSemantics?.fieldDefinitions ? (
           <MarkdownContent content={dataAndSemantics.fieldDefinitions} />
         ) : (
-          <Typography variant="body2">
-            —
-          </Typography>
+          <Typography variant="body2">—</Typography>
         )}
       </CardContent>
     </Card>

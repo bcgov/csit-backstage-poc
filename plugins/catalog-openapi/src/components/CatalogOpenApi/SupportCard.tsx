@@ -1,12 +1,9 @@
 import { Card, CardContent, Grid, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-import type {
-  OpenApiEntity,
-  OpenApiSupportChannel,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { OpenApiEntity, OpenApiSupportChannel } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 type SupportChannelCardProps = {
@@ -47,8 +44,10 @@ const SupportChannelCard = ({ title, channel }: SupportChannelCardProps) => {
   );
 };
 
-export const SupportCard = ({ spec }: Props) => {
-  const support = spec.support;
+export const SupportCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const support = bcdc?.support;
 
   return (
     <Card>
@@ -56,7 +55,6 @@ export const SupportCard = ({ spec }: Props) => {
         <Typography variant="h5" gutterBottom>
           Support
         </Typography>
-
 
         <Typography variant="body2" paragraph>
           Find help based on where you are in your API journey.
@@ -93,20 +91,25 @@ export const SupportCard = ({ spec }: Props) => {
               }}
             >
               <CardContent>
-                <Typography variant="subtitle1" gutterBottom style={{ fontWeight: 700 }}>
+                <Typography
+                  variant="subtitle1"
+                  gutterBottom
+                  style={{ fontWeight: 700 }}
+                >
                   Production Incident Escalation
                 </Typography>
 
                 {support?.productionIncidentEscalation ? (
-                  <MarkdownContent content={support.productionIncidentEscalation} />
+                  <MarkdownContent
+                    content={support.productionIncidentEscalation}
+                  />
                 ) : (
-                  <Typography variant="body2">
-                    —
-                  </Typography>
+                  <Typography variant="body2">—</Typography>
                 )}
               </CardContent>
             </Card>
           </Grid>
+
           <Grid item xs={12}>
             <Card
               variant="outlined"
@@ -115,20 +118,22 @@ export const SupportCard = ({ spec }: Props) => {
               }}
             >
               <CardContent>
-                <Typography variant="subtitle1" gutterBottom style={{ fontWeight: 700 }}>
+                <Typography
+                  variant="subtitle1"
+                  gutterBottom
+                  style={{ fontWeight: 700 }}
+                >
                   API Ownership
                 </Typography>
 
                 {support?.apiOwnership ? (
                   <MarkdownContent content={support.apiOwnership} />
                 ) : (
-                  <Typography variant="body2">
-                    —
-                  </Typography>
+                  <Typography variant="body2">—</Typography>
                 )}
               </CardContent>
             </Card>
-          </Grid>          
+          </Grid>
         </Grid>
       </CardContent>
     </Card>

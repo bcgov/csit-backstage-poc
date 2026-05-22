@@ -6,6 +6,7 @@ import { useApi } from '@backstage/core-plugin-api';
 import { catalogApiRef } from '@backstage/plugin-catalog-react';
 import { useAsync } from 'react-use';
 import { RELATION_PROVIDES_API } from '@backstage/catalog-model';
+import { EntityCatalogGraphCard } from '@backstage/plugin-catalog-graph';
 import { useMemo, useState } from 'react';
 import { AboutDatasetCard } from './AboutDatasetCard';
 import { AuthoritativeDesignationCard } from './AuthoritativeDesignationCard';
@@ -198,6 +199,14 @@ export const CatalogDatasetPage = () => {
             namespace={entity.metadata.namespace}
           />
         </>
+      </EntityLayout.Route>
+
+      <EntityLayout.Route path="/catalog" title="Catalog">
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            <EntityCatalogGraphCard title="Relations" height={700} />
+          </Grid>
+        </Grid>
       </EntityLayout.Route>
     </EntityLayout>
   );

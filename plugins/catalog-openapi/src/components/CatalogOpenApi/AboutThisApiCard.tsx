@@ -1,9 +1,9 @@
 import { Card, CardContent, Grid, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { OpenApiEntity } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 type SectionBoxProps = {
@@ -36,8 +36,10 @@ const SectionBox = ({ title, content, backgroundColor }: SectionBoxProps) => {
   );
 };
 
-export const AboutThisApiCard = ({ spec }: Props) => {
-  const about = spec.about;
+export const AboutThisApiCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const about = bcdc?.about;
 
   return (
     <Card>

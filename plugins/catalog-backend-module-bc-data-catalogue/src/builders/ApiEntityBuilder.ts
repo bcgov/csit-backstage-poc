@@ -1,5 +1,6 @@
 import { ApiEntity, EntityLink } from '@backstage/catalog-model';
 import type { BcResource } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import { buildClientSchema, getIntrospectionQuery, IntrospectionQuery, printSchema } from 'graphql';
 import { BcDataCatalogueNaming } from '../BcDataCatalogueNaming';
 
 type ApiEntityBuilderOptions = {
@@ -11,9 +12,14 @@ type BuildApiEntityOptions = {
   ownerGroupId: string;
   systemId: string;
   apiSafeName: string;
-  definition: string;
+  definitionUrl: string;
   apiType?: string;
   bcdcDatasetResourceUrl: string;
+};
+
+type GraphQlIntrospectionResponse = {
+  data?: IntrospectionQuery;
+  errors?: unknown[];
 };
 
 export class ApiEntityBuilder {
@@ -23,17 +29,22 @@ export class ApiEntityBuilder {
     this.naming = options.naming;
   }
 
-  build(options: BuildApiEntityOptions): ApiEntity {
+  async build(options: BuildApiEntityOptions): Promise<ApiEntity> {
     const {
       apiResource,
       ownerGroupId,
       systemId,
       apiSafeName,
-      definition,
+      definitionUrl,
       apiType,
       bcdcDatasetResourceUrl,
     } = options;
 
+    const resolvedApiType = apiType ?? apiResource.bcdc_type;
+    const resolvedDefinition = await this.resolveDefinition(
+      resolvedApiType,
+      definitionUrl,
+    );
     const apiEntityLinks = this.buildLinks(apiResource, bcdcDatasetResourceUrl);
     const managedByLocation = `url:${bcdcDatasetResourceUrl}`;
 
@@ -41,10 +52,10 @@ export class ApiEntityBuilder {
       apiVersion: 'backstage.io/v1alpha1',
       kind: 'API',
       spec: {
-        type: apiType ?? apiResource.bcdc_type,
+        type: resolvedApiType,
         lifecycle: 'production',
         owner: ownerGroupId,
-        definition,
+        definition: resolvedDefinition,
         system: systemId,
       },
       metadata: {
@@ -96,6 +107,51 @@ export class ApiEntityBuilder {
         },
       },
     };
+  }
+
+  private async resolveDefinition(
+    apiType: string,
+    definition: string,
+  ): Promise<string> {
+    if (apiType !== 'graphql' || !this.isHttpUrl(definition)) {
+      return definition;
+    }
+
+    const schema = await this.fetchGraphQlSchema(definition);
+
+    return schema ?? definition;
+  }
+
+  private async fetchGraphQlSchema(url: string): Promise<string | undefined> {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: getIntrospectionQuery(),
+        }),
+      });
+
+      if (!response.ok) {
+        return undefined;
+      }
+
+      const result = (await response.json()) as GraphQlIntrospectionResponse;
+
+      if (!result.data || result.errors?.length) {
+        return undefined;
+      }
+
+      return printSchema(buildClientSchema(result.data));
+    } catch {
+      return undefined;
+    }
+  }
+
+  private isHttpUrl(value: string): boolean {
+    return /^https?:\/\//i.test(value);
   }
 
   private buildLinks(apiResource: BcResource, bcdcDatasetResourceUrl: string): EntityLink[] | undefined {

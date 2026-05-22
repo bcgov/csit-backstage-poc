@@ -1,9 +1,9 @@
 import { Card, CardContent, Grid, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { OpenApiEntity } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 const renderValue = (value?: string) =>
@@ -35,16 +35,16 @@ const DetailRow = ({ label, value }: { label: string; value?: string }) => {
         </Typography>
       </Grid>
       <Grid item xs={12} sm={8}>
-        <Typography variant="body2">
-          {renderValue(value)}
-        </Typography>
+        <Typography variant="body2">{renderValue(value)}</Typography>
       </Grid>
     </Grid>
   );
 };
 
-export const VersioningAndChangeGovernanceCard = ({ spec }: Props) => {
-  const versioning = spec.versioningAndChangeGovernance;
+export const VersioningAndChangeGovernanceCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const versioning = bcdc?.versioningAndChangeGovernance;
   const changeManagement = versioning?.changeManagement ?? [];
 
   return (
@@ -63,14 +63,14 @@ export const VersioningAndChangeGovernanceCard = ({ spec }: Props) => {
             label="Current Version"
             value={versioning?.currentVersion}
           />
-        <DetailRow
-        label="Initial Release"
-        value={formatDate(versioning?.initialRelease)}
-        />
-        <DetailRow
-        label="Last Updated"
-        value={formatDate(versioning?.lastUpdated)}
-        />
+          <DetailRow
+            label="Initial Release"
+            value={formatDate(versioning?.initialRelease)}
+          />
+          <DetailRow
+            label="Last Updated"
+            value={formatDate(versioning?.lastUpdated)}
+          />
         </div>
 
         {versioning?.description ? (
@@ -138,9 +138,9 @@ export const VersioningAndChangeGovernanceCard = ({ spec }: Props) => {
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={3}>
-                    <Typography variant="body2">
+                  <Typography variant="body2">
                     {formatDate(change.releaseDate)}
-                    </Typography>
+                  </Typography>
                 </Grid>
                 <Grid item xs={12} sm={2}>
                   <Typography variant="body2">
@@ -161,31 +161,31 @@ export const VersioningAndChangeGovernanceCard = ({ spec }: Props) => {
           </Typography>
         )}
 
-        {versioning?.changeManagemnentNotes ? (
-        <div style={{ marginBottom: 24 }}>
-            <MarkdownContent content={versioning.changeManagemnentNotes} />
-        </div>
+        {versioning?.changeManagementNotes ? (
+          <div style={{ marginBottom: 24 }}>
+            <MarkdownContent content={versioning.changeManagementNotes} />
+          </div>
         ) : null}
 
         <Card
-        variant="outlined"
-        style={{
+          variant="outlined"
+          style={{
             borderLeft: '4px solid #1a5a96',
             backgroundColor: '#eef6fb',
             marginBottom: 24,
-        }}
+          }}
         >
-        <CardContent>
+          <CardContent>
             <Typography variant="h6" gutterBottom>
-            Breaking Change Policy
+              Breaking Change Policy
             </Typography>
 
             <Typography variant="body2" paragraph>
-            Breaking changes require a major version increment and a minimum
-            90-day deprecation notice. Consuming applications will be notified
-            through the appropriate support and notification channels.
+              Breaking changes require a major version increment and a minimum
+              90-day deprecation notice. Consuming applications will be notified
+              through the appropriate support and notification channels.
             </Typography>
-        </CardContent>
+          </CardContent>
         </Card>
 
         <Typography variant="h6" gutterBottom>
@@ -195,9 +195,7 @@ export const VersioningAndChangeGovernanceCard = ({ spec }: Props) => {
         {versioning?.governanceAndUsageConstraints ? (
           <MarkdownContent content={versioning.governanceAndUsageConstraints} />
         ) : (
-          <Typography variant="body2">
-            —
-          </Typography>
+          <Typography variant="body2">—</Typography>
         )}
       </CardContent>
     </Card>

@@ -27,6 +27,7 @@ export type DatasetAccessMethod = {
   type: string;
   format?: string;
   updateFrequency?: string;
+  entityRef?: string;
 };
 
 export type DatasetSchemaField = {
@@ -85,7 +86,6 @@ export type DatasetSupport = {
   dataCustodian?: string;
   governanceAuthority?: string;
   pathways?: string;
-
   dataAndSemantics?: DatasetSupportChannel;
   accessAndIntegration?: DatasetSupportChannel;
   governanceAndProductionEscalation?: DatasetGovernanceAndProductionEscalation;
@@ -98,57 +98,42 @@ export interface DatasetEntity extends Entity {
     owner: string;
     system?: string;
     type: string;
-
     description: string;
     status: DatasetStatus;
     securityClassification: DatasetSecurityClassification;
-
     connectedServicesDescription?: string;
-
     updateFrequency?: string;
-
     quality?: {
       score?: string;
       validation?: string;
       controls?: string[];
     };
-
     governance?: {
       retention?: string;
       description?: string;
     };
-
     about?: {
       description?: string;
     };
-
     authoritativeDesignation?: {
       authoritativeFor?: string;
     };
-
     providesApis?: string[];
-
     accessMethods?: DatasetAccessMethod[];
-
     schema?: DatasetSchema;
-
     entityDefinitions?: DatasetEntityDefinitions;
-
     lineage?: {
       sourceSystem?: string;
       transformation?: string;
       refresh?: string;
     };
-
     versioning?: {
       currentVersion?: string;
       initialRelease?: string;
       lastUpdated?: string;
       description?: string;
     };
-
     support?: DatasetSupport;
-
     relatedResources?: Array<{
       url: string;
       title?: string;

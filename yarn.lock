@@ -6198,7 +6198,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@bcgov/plugin-catalog-common-bc-data-catalogue@workspace:*, @bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue":
+"@bcgov/plugin-catalog-common-bc-data-catalogue@workspace:*, @bcgov/plugin-catalog-common-bc-data-catalogue@workspace:^, @bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue":
   version: 0.0.0-use.local
   resolution: "@bcgov/plugin-catalog-common-bc-data-catalogue@workspace:plugins/catalog-common-bc-data-catalogue"
   dependencies:
@@ -18300,6 +18300,7 @@ __metadata:
     "@backstage/plugin-user-settings": "npm:^0.8.23"
     "@backstage/test-utils": "npm:^1.7.9"
     "@backstage/theme": "npm:^0.6.6"
+    "@bcgov/plugin-catalog-common-bc-data-catalogue": "workspace:^"
     "@bcgov/plugin-catalog-dataset": "workspace:^"
     "@bcgov/plugin-catalog-openapi": "workspace:^"
     "@material-ui/core": "npm:^4.12.2"

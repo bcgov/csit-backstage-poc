@@ -1,43 +1,21 @@
-import {
-  Card,
-  CardContent,
-  Typography,
-} from '@material-ui/core';
-import type { Entity } from '@backstage/catalog-model';
+import { Card, CardContent, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-
-type OpenApiEnvironment = {
-  name?: string;
-  url: string;
-  description?: string;
-};
-
-type OpenApiSpec = {
-  description?: string;
-  connectedServicesDescription?: string;
-  type?: string;
-  providerMinistry?: string;
-  status?: string;
-  securityClassification?: string;
-  application?: string;
-  sdxRequired?: string;
-  environments?: OpenApiEnvironment[];
-  accessModel?: string;
-};
+import type { OpenApiEntity } from '../../types';
 
 type Props = {
-  entity: Entity;
-  spec: OpenApiSpec;
+  entity: OpenApiEntity;
 };
 
-export const MainCard = ({
-  entity,
-  spec,
-}: Props) => {
+export const MainCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const description =
+    bcdc?.description ?? entity.metadata.description ?? '';
+
   return (
     <Card>
       <CardContent>
-        <MarkdownContent content={spec.description ?? ''} />
+        <MarkdownContent content={description} />
 
         {entity.metadata.tags?.length ? (
           <div>

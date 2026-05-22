@@ -2,6 +2,7 @@ import {
   ApiEntity,
   Entity,
   GroupEntity,
+  ResourceEntity,
   SystemEntity,
   UserEntity,
 } from '@backstage/catalog-model';
@@ -25,6 +26,7 @@ import { ApiEntityBuilder } from './builders/ApiEntityBuilder';
 import { DatasetEntityBuilder } from './builders/DatasetEntityBuilder';
 import { GroupEntityBuilder } from './builders/GroupEntityBuilder';
 import { OpenApiEntityBuilder } from './builders/OpenApiEntityBuilder';
+import { ResourceEntityBuilder } from './builders/ResourceEntityBuilder';
 import { SystemEntityBuilder } from './builders/SystemEntityBuilder';
 import { UserEntityBuilder } from './builders/UserEntityBuilder';
 
@@ -38,8 +40,21 @@ type ApiResourceCandidate = {
   apiResource: BcResource;
   definitionUrl: string;
   definitionHost?: string;
-  isOpenApiCandidate: boolean;
+  isGraphQlCandidate: boolean;
 };
+
+type GenericWebserviceResource = {
+  resource: BcResource;
+  definitionUrl: string;
+  definitionHost?: string;
+};
+
+type SpatialResourceType =
+  | 'ogc-wms'
+  | 'kml-ground-overlay'
+  | 'arcgis-online-item'
+  | 'arcgis-mapserver'
+  | 'arcgis-featureserver';
 
 export class BcDataCatalogueEntityFactory {
   private readonly reader: UrlReaderService;
@@ -51,6 +66,7 @@ export class BcDataCatalogueEntityFactory {
   private readonly datasetEntityBuilder: DatasetEntityBuilder;
   private readonly groupEntityBuilder: GroupEntityBuilder;
   private readonly openApiEntityBuilder: OpenApiEntityBuilder;
+  private readonly resourceEntityBuilder: ResourceEntityBuilder;
   private readonly systemEntityBuilder: SystemEntityBuilder;
   private readonly userEntityBuilder: UserEntityBuilder;
 
@@ -73,6 +89,9 @@ export class BcDataCatalogueEntityFactory {
     this.openApiEntityBuilder = new OpenApiEntityBuilder({
       naming: this.naming,
     });
+    this.resourceEntityBuilder = new ResourceEntityBuilder({
+      naming: this.naming,
+    });
     this.systemEntityBuilder = new SystemEntityBuilder({
       naming: this.naming,
     });
@@ -81,19 +100,20 @@ export class BcDataCatalogueEntityFactory {
     });
   }
 
-  async createEntities(allPackages: BcDataCataloguePackage[]): Promise<Entity[]> {
+  async createEntities(
+    allPackages: BcDataCataloguePackage[],
+  ): Promise<Entity[]> {
     this.logger.info('[BCDC Entity Factory] <createEntities');
 
     const allEntities: Entity[] = [];
-
     const allGroups = new Map<string, GroupEntity>();
-    const bcGovGroupId = this.naming.getGroupId('gov.bc.ca');
 
+    const bcGovGroupId = this.naming.getGroupId('gov.bc.ca');
     allGroups.set(
       bcGovGroupId,
       this.groupEntityBuilder.build({
         hostName: 'gov.bc.ca',
-        displayName: 'Governent of British Columbia',
+        displayName: 'Government of British Columbia',
       }),
     );
 
@@ -106,6 +126,7 @@ export class BcDataCatalogueEntityFactory {
     this.logger.info(
       `[BCDC Entity Factory] Organizations ${allOrganizations.size}`,
     );
+
     allOrganizations.forEach(organization => {
       const organizationGroupId = this.naming.getGroupId(organization.name);
 
@@ -129,6 +150,7 @@ export class BcDataCatalogueEntityFactory {
     });
 
     const allUsers = new Map<string, UserEntity>();
+
     allPackages.forEach(pkg => {
       pkg.contacts?.forEach(contact => {
         const email = contact.email.toLowerCase();
@@ -152,7 +174,6 @@ export class BcDataCatalogueEntityFactory {
           );
         } else {
           const groupId = this.naming.getGroupId(hostName);
-
           let group = allGroups.get(groupId);
 
           if (group === undefined) {
@@ -174,45 +195,86 @@ export class BcDataCatalogueEntityFactory {
     const allDatasets = new Map<string, DatasetEntity>();
     const allApis = new Map<string, ApiEntity>();
     const allOpenApis = new Map<string, OpenApiEntity>();
+    const allResources = new Map<string, ResourceEntity>();
+    const allApiIds = new Set<string>();
+    const allResourceIds = new Set<string>();
     const openApiDefinitionToId = new Map<string, string>();
 
     for (const pkg of allPackages) {
       const safeName = this.naming.toSafeName(pkg.name);
+      const datasetEntityRef = this.naming.getDatasetId(safeName);
       const systemId = this.naming.getSystemId(pkg.organization.name);
       const ownerGroupId = this.naming.getGroupId(pkg.organization.name);
-
       const apiResources: ApiResourceCandidate[] = [];
+      const genericWebserviceResources: GenericWebserviceResource[] = [];
       const providesApis: string[] = [];
+      const promotedApiResourceIds = new Set<string>();
+      const accessMethodEntityRefs = new Map<string, string>();
+      const bcdcDatasetUrl = `https://catalogue.data.gov.bc.ca/dataset/${pkg.name}`;
+      let hasOpenApi = false;
+      let hasSpatialResources = false;
+      let hasGenericWebserviceApis = false;
 
       pkg.resources?.forEach(resource => {
+        const definitionUrl = this.getDefinitionUrl(resource.url);
+        const definitionHost = definitionUrl
+          ? this.getUrlHost(definitionUrl)
+          : undefined;
+        const spatialResourceType = this.getSpatialResourceType(
+          resource,
+          definitionUrl,
+        );
+
+        if (spatialResourceType) {
+          const resourceSafeName = this.buildResourceSafeName(
+            pkg.name,
+            resource.name,
+            spatialResourceType,
+            resource.id,
+            allResourceIds,
+          );
+          const resourceId = this.naming.getResourceId(resourceSafeName);
+          const bcdcDatasetResourceUrl = `${bcdcDatasetUrl}/resource/${resource.id}`;
+
+          const resourceEntity = this.resourceEntityBuilder.build({
+            resource,
+            ownerGroupId,
+            systemId,
+            resourceSafeName,
+            resourceType: spatialResourceType,
+            datasetEntityRef,
+            bcdcDatasetResourceUrl,
+          });
+
+          allResources.set(resourceId, resourceEntity);
+          accessMethodEntityRefs.set(resource.id, resourceId);
+          hasSpatialResources = true;
+          return;
+        }
+
         const apiResourceCandidate = this.getApiResourceCandidate(resource);
 
         if (apiResourceCandidate) {
           apiResources.push(apiResourceCandidate);
           return;
         }
+
+        if (resource.bcdc_type === 'webservice' && definitionUrl) {
+          genericWebserviceResources.push({
+            resource,
+            definitionUrl,
+            definitionHost,
+          });
+        }
       });
-
-      const bcdcDatasetUrl =`https://catalogue.data.gov.bc.ca/dataset/${pkg.name}`;
-
-      const datasetEntity = this.datasetEntityBuilder.build({
-        pkg,
-        safeName,
-        ownerGroupId,
-        systemId,
-        providesApis,
-        bcdcDatasetUrl,
-      });
-
-      allDatasets.set(this.naming.getComponentId(safeName), datasetEntity);
-
-      let hasOpenApi = false;
 
       for (const candidate of apiResources) {
-        
-        const { apiResource, definitionUrl, definitionHost, isOpenApiCandidate } =
-          candidate;
-        const name = apiResource.name;
+        const {
+          apiResource,
+          definitionUrl,
+          definitionHost,
+          isGraphQlCandidate,
+        } = candidate;
 
         if (definitionHost && !this.allowedHosts.includes(definitionHost)) {
           this.logger.warn(
@@ -221,66 +283,67 @@ export class BcDataCatalogueEntityFactory {
         }
 
         let definitionContent = definitionUrl;
-        let isOpenApiResource = false;
+        let openApiDefinition: string | undefined;
 
-        if (isOpenApiCandidate) {
+        if (!isGraphQlCandidate) {
           const fetchedDefinition = await this.tryReadDefinition(definitionUrl);
 
           if (fetchedDefinition !== undefined) {
-            definitionContent = fetchedDefinition;
-            isOpenApiResource =
-              (await parseOpenApiDocument(fetchedDefinition)) !== undefined;
-          }
-
-          if (isOpenApiResource) {
-            hasOpenApi = true;
+            openApiDefinition =
+              await this.tryNormalizeOpenApiDefinition(fetchedDefinition);
           }
         }
 
-        const bcdcDatasetResourceUrl =`${bcdcDatasetUrl}/resource/${apiResource.id}`;
+        const bcdcDatasetResourceUrl = `${bcdcDatasetUrl}/resource/${apiResource.id}`;
 
-        if (isOpenApiResource) {
+        if (openApiDefinition !== undefined) {
+          hasOpenApi = true;
+          definitionContent = openApiDefinition;
+
           const normalizedDefinitionUrl =
             this.normalizeOpenApiDefinitionUrl(definitionUrl);
-          const existingOpenApiId =
-            openApiDefinitionToId.get(normalizedDefinitionUrl);
+          const existingOpenApiId = openApiDefinitionToId.get(
+            normalizedDefinitionUrl,
+          );
 
           if (existingOpenApiId) {
             const existingOpenApi = allOpenApis.get(existingOpenApiId)!;
 
             this.logger.warn(
               '[BCDC Entity Factory] ' +
-                `Duplicate OpenApi definition detected for "${normalizedDefinitionUrl}". ` +
+                `Duplicate OpenApi definition detected for "${normalizedDefinitionUrl}".\n` +
                 `Existing OpenApi: name="${existingOpenApi.metadata.name}", ` +
                 `owner="${existingOpenApi.spec.owner}", ` +
                 `system="${existingOpenApi.spec.system ?? ''}", ` +
                 `bcdc_type="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-bcdc_type']}", ` +
                 `format="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
                 `resource-url="${existingOpenApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}", ` +
-                `openapi-url="${normalizedDefinitionUrl}". ` +
+                `openapi-url="${normalizedDefinitionUrl}".\n` +
                 `New OpenApi resource: name="${apiResource.name}", ` +
                 `owner="${ownerGroupId}", ` +
                 `system="${systemId}", ` +
                 `bcdc_type="${apiResource.bcdc_type}", ` +
                 `format="${apiResource.format}", ` +
                 `resource-url="${apiResource.url}", ` +
-                `openapi-url="${normalizedDefinitionUrl}". ` +
+                `openapi-url="${normalizedDefinitionUrl}".\n` +
                 `Reusing existing OpenApi entity.`,
             );
 
-            if (!datasetEntity.spec.providesApis?.includes(existingOpenApiId)) {
-              datasetEntity.spec.providesApis?.push(existingOpenApiId);
+            if (!providesApis.includes(existingOpenApiId)) {
+              providesApis.push(existingOpenApiId);
             }
 
+            promotedApiResourceIds.add(apiResource.id);
             continue;
           }
 
-          const openApiSafeName = this.buildOpenApiSafeName(
-            name,
+          const openApiSafeName = this.buildApiSafeName(
+            apiResource.name,
             definitionHost,
-            allOpenApis,
+            apiResource.id,
+            allApiIds,
           );
-          const openApiId = this.naming.getOpenApiId(openApiSafeName);
+          const openApiId = this.naming.getApiId(openApiSafeName);
 
           const openApiEntity = await this.openApiEntityBuilder.build({
             pkg,
@@ -288,7 +351,7 @@ export class BcDataCatalogueEntityFactory {
             ownerGroupId,
             systemId,
             openApiSafeName,
-            datasetEntityRef: this.naming.getDatasetId(safeName),
+            datasetEntityRef,
             definitionUrl,
             definition: definitionContent,
             bcdcDatasetResourceUrl,
@@ -296,60 +359,65 @@ export class BcDataCatalogueEntityFactory {
 
           allOpenApis.set(openApiId, openApiEntity);
           openApiDefinitionToId.set(normalizedDefinitionUrl, openApiId);
-          datasetEntity.spec.providesApis?.push(openApiId);
+          providesApis.push(openApiId);
+          promotedApiResourceIds.add(apiResource.id);
           continue;
         }
 
-        const apiSafeName = this.buildApiSafeName(name, definitionHost);
-        const apiId = this.naming.getApiId(apiSafeName);
-        const existingApi = allApis.get(apiId);
-        const expectedApiType = apiResource.bcdc_type;
-
-        if (existingApi) {
-          if (
-            existingApi.spec.type !== expectedApiType ||
-            existingApi.spec.owner !== ownerGroupId ||
-            existingApi.spec.system !== systemId
-          ) {
-            this.logger.warn(
-              '[BCDC Entity Factory] ' +
-                `Duplicate API identity detected for "${apiSafeName}" (ID: ${apiId}). ` +
-                `Existing API: type="${existingApi.spec.type}", owner="${existingApi.spec.owner}", system="${existingApi.spec.system ?? ''}", ` +
-                `bcdc_type="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-bcdc_type']}", ` +
-                `format="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-format']}", ` +
-                `resource-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-id']}", ` +
-                `package-id="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-package_id']}", ` +
-                `url="${existingApi.metadata.annotations?.['bcdata.gov.bc.ca/resource-url']}". ` +
-                `New API: type="${expectedApiType}", owner="${ownerGroupId}", system="${systemId}", ` +
-                `bcdc_type="${apiResource.bcdc_type}", ` +
-                `format="${apiResource.format}", ` +
-                `resource-id="${apiResource.id}", ` +
-                `package-id="${apiResource.package_id}", ` +
-                `url="${apiResource.url}". ` +
-                `Reusing existing API entity.`,
-            );
-          }
-
-          if (!datasetEntity.spec.providesApis?.includes(apiId)) {
-            datasetEntity.spec.providesApis?.push(apiId);
-          }
-
+        if (!isGraphQlCandidate) {
+          genericWebserviceResources.push({
+            resource: apiResource,
+            definitionUrl,
+            definitionHost,
+          });
           continue;
         }
 
-        const apiEntity = this.apiEntityBuilder.build({
+        const apiId = await this.createGenericApiEntity({
           apiResource,
+          definitionUrl,
+          definitionHost,
+          apiType: 'graphql',
           ownerGroupId,
           systemId,
-          apiSafeName,
-          definition: definitionContent,
-          apiType: expectedApiType,
+          allApiIds,
+          allApis,
           bcdcDatasetResourceUrl,
         });
 
-        allApis.set(apiId, apiEntity);
-        datasetEntity.spec.providesApis?.push(apiId);
+        providesApis.push(apiId);
+        promotedApiResourceIds.add(apiResource.id);
       }
+
+      for (const generic of genericWebserviceResources) {
+        const bcdcDatasetResourceUrl = `${bcdcDatasetUrl}/resource/${generic.resource.id}`;
+        const apiId = await this.createGenericApiEntity({
+          apiResource: generic.resource,
+          definitionUrl: generic.definitionUrl,
+          definitionHost: generic.definitionHost,
+          apiType: generic.resource.bcdc_type,
+          ownerGroupId,
+          systemId,
+          allApiIds,
+          allApis,
+          bcdcDatasetResourceUrl,
+        });
+
+        providesApis.push(apiId);
+        promotedApiResourceIds.add(generic.resource.id);
+        hasGenericWebserviceApis = true;
+      }
+
+      const datasetEntity = this.datasetEntityBuilder.build({
+        pkg,
+        safeName,
+        ownerGroupId,
+        systemId,
+        providesApis,
+        promotedApiResourceIds,
+        accessMethodEntityRefs,
+        bcdcDatasetUrl,
+      });
 
       if (datasetEntity.spec.providesApis?.length) {
         if (!datasetEntity.metadata.tags?.includes('has-api')) {
@@ -365,7 +433,29 @@ export class BcDataCatalogueEntityFactory {
             'has-openapi',
           ];
         }
+
+        if (
+          hasGenericWebserviceApis &&
+          !datasetEntity.metadata.tags?.includes('has-generic-webservice-apis')
+        ) {
+          datasetEntity.metadata.tags = [
+            ...(datasetEntity.metadata.tags ?? []),
+            'has-generic-webservice-apis',
+          ];
+        }
       }
+
+      if (
+        hasSpatialResources &&
+        !datasetEntity.metadata.tags?.includes('has-spatial-resources')
+      ) {
+        datasetEntity.metadata.tags = [
+          ...(datasetEntity.metadata.tags ?? []),
+          'has-spatial-resources',
+        ];
+      }
+
+      allDatasets.set(this.naming.getComponentId(safeName), datasetEntity);
     }
 
     const userEntities: UserEntity[] = Array.from(allUsers.values());
@@ -374,6 +464,7 @@ export class BcDataCatalogueEntityFactory {
     const datasetEntities: DatasetEntity[] = Array.from(allDatasets.values());
     const apiEntities: ApiEntity[] = Array.from(allApis.values());
     const openApiEntities: OpenApiEntity[] = Array.from(allOpenApis.values());
+    const resourceEntities: ResourceEntity[] = Array.from(allResources.values());
 
     allEntities.push(...userEntities);
     allEntities.push(...groupEntities);
@@ -381,106 +472,169 @@ export class BcDataCatalogueEntityFactory {
     allEntities.push(...datasetEntities);
     allEntities.push(...apiEntities);
     allEntities.push(...openApiEntities);
+    allEntities.push(...resourceEntities);
 
     this.logger.info(
       `[BCDC Entity Factory] >createEntities ${allEntities.length}`,
     );
+
     return allEntities;
   }
 
-  private buildOpenApiSafeName(
+  private async createGenericApiEntity(options: {
+    apiResource: BcResource;
+    definitionUrl: string;
+    definitionHost?: string;
+    apiType: string;
+    ownerGroupId: string;
+    systemId: string;
+    allApiIds: Set<string>;
+    allApis: Map<string, ApiEntity>;
+    bcdcDatasetResourceUrl: string;
+  }): Promise<string> {
+    const {
+      apiResource,
+      definitionUrl,
+      definitionHost,
+      apiType,
+      ownerGroupId,
+      systemId,
+      allApiIds,
+      allApis,
+      bcdcDatasetResourceUrl,
+    } = options;
+
+    const apiSafeName = this.buildApiSafeName(
+      apiResource.name,
+      definitionHost,
+      apiResource.id,
+      allApiIds,
+    );
+    const apiId = this.naming.getApiId(apiSafeName);
+
+    if (allApis.has(apiId)) {
+      return apiId;
+    }
+
+    const apiEntity = await this.apiEntityBuilder.build({
+      apiResource,
+      ownerGroupId,
+      systemId,
+      apiSafeName,
+      definitionUrl,
+      apiType,
+      bcdcDatasetResourceUrl,
+    });
+
+    allApis.set(apiId, apiEntity);
+
+    return apiId;
+  }
+
+  private buildApiSafeName(
     resourceName: string,
     host: string | undefined,
-    allOpenApis: Map<string, OpenApiEntity>,
+    resourceId: string,
+    usedApiIds: Set<string>,
   ): string {
     const baseName = host
       ? this.naming.toSafeName(`${resourceName}-${host}`)
       : this.naming.toSafeName(resourceName);
 
-    let candidateName = baseName;
-    let candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+    const baseApiId = this.naming.getApiId(baseName);
 
-    if (!allOpenApis.has(candidateOpenApiId)) {
-      return candidateName;
+    if (!usedApiIds.has(baseApiId)) {
+      usedApiIds.add(baseApiId);
+      return baseName;
     }
 
-    const distinguishingSuffix =
-      host && host.length > 0
-        ? this.naming.toSafeName(host)
-        : this.naming.extractDistinguishingSuffix(resourceName);
-
-    const suffixWithSeparator = `-${distinguishingSuffix}`;
-    const maxBaseLength = 63 - suffixWithSeparator.length;
-
-    let truncatedBase = baseName;
-    if (baseName.length > maxBaseLength) {
-      truncatedBase = baseName.slice(0, maxBaseLength).replace(/[-_.]+$/, '');
-    }
-
-    candidateName = this.naming.toSafeName(
-      `${truncatedBase}${suffixWithSeparator}`,
-    );
-    candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+    const resourceIdSuffix = this.naming.toSafeName(resourceId);
+    let candidateName = this.appendSuffix(baseName, resourceIdSuffix);
+    let candidateApiId = this.naming.getApiId(candidateName);
 
     let counter = 1;
-    while (allOpenApis.has(candidateOpenApiId)) {
-      const counterSuffix = `-${counter}`;
-      const maxBaseWithCounter =
-        63 - suffixWithSeparator.length - counterSuffix.length;
 
-      let truncatedBaseForCounter = baseName;
-      if (baseName.length > maxBaseWithCounter) {
-        truncatedBaseForCounter = baseName
-          .slice(0, maxBaseWithCounter)
-          .replace(/[-_.]+$/, '');
-      }
-
-      candidateName = this.naming.toSafeName(
-        `${truncatedBaseForCounter}${suffixWithSeparator}${counterSuffix}`,
+    while (usedApiIds.has(candidateApiId)) {
+      candidateName = this.appendSuffix(
+        baseName,
+        `${resourceIdSuffix}-${counter}`,
       );
-      candidateOpenApiId = this.naming.getOpenApiId(candidateName);
+      candidateApiId = this.naming.getApiId(candidateName);
       counter++;
     }
 
+    usedApiIds.add(candidateApiId);
     return candidateName;
   }
 
-  private buildApiSafeName(resourceName: string, host?: string): string {
-    return host
-      ? this.naming.toSafeName(`${resourceName}-${host}`)
-      : this.naming.toSafeName(resourceName);
+  private buildResourceSafeName(
+    datasetName: string,
+    resourceName: string,
+    resourceType: SpatialResourceType,
+    resourceId: string,
+    usedResourceIds: Set<string>,
+  ): string {
+    const baseName = this.naming.toSafeName(
+      `${datasetName}-${resourceName}-${resourceType}`,
+    );
+    const baseResourceId = this.naming.getResourceId(baseName);
+
+    if (!usedResourceIds.has(baseResourceId)) {
+      usedResourceIds.add(baseResourceId);
+      return baseName;
+    }
+
+    const resourceIdSuffix = this.naming.toSafeName(resourceId);
+    let candidateName = this.appendSuffix(baseName, resourceIdSuffix);
+    let candidateResourceId = this.naming.getResourceId(candidateName);
+
+    let counter = 1;
+
+    while (usedResourceIds.has(candidateResourceId)) {
+      candidateName = this.appendSuffix(
+        baseName,
+        `${resourceIdSuffix}-${counter}`,
+      );
+      candidateResourceId = this.naming.getResourceId(candidateName);
+      counter++;
+    }
+
+    usedResourceIds.add(candidateResourceId);
+    return candidateName;
+  }
+
+  private appendSuffix(baseName: string, suffix: string): string {
+    const safeSuffix = this.naming.toSafeName(suffix || 'item');
+    const suffixWithSeparator = `-${safeSuffix}`;
+    const maxBaseLength = 63 - suffixWithSeparator.length;
+    const truncatedBase = baseName
+      .slice(0, Math.max(maxBaseLength, 0))
+      .replace(/[-_.]+$/, '');
+
+    return this.naming.toSafeName(`${truncatedBase}${suffixWithSeparator}`);
   }
 
   private getApiResourceCandidate(
     resource: BcResource,
   ): ApiResourceCandidate | undefined {
     const definitionUrl = this.getDefinitionUrl(resource.url);
+
     if (!definitionUrl) {
       return undefined;
     }
 
     const definitionHost = this.getUrlHost(definitionUrl);
 
-    const isOpenApiCandidate =
-      resource.format === 'openapi-json' ||
-      (resource.bcdc_type === 'webservice' &&
-        ['json', 'xml', 'html'].includes(resource.format) &&
-        this.looksLikeOpenApiUrl(resource.url, definitionUrl));
-
-    if (isOpenApiCandidate) {
+    if (this.isGraphQlResource(resource, definitionUrl)) {
       return {
         apiResource: resource,
         definitionUrl,
         definitionHost,
-        isOpenApiCandidate: true,
+        isGraphQlCandidate: true,
       };
     }
 
-    if (resource.bcdc_type !== 'webservice') {
-      return undefined;
-    }
-
-    if (['kml', 'wms', 'arcgis_rest', 'xml'].includes(resource.format)) {
+    if (!this.isPotentialOpenApiResource(resource, definitionUrl)) {
       return undefined;
     }
 
@@ -488,12 +642,143 @@ export class BcDataCatalogueEntityFactory {
       apiResource: resource,
       definitionUrl,
       definitionHost,
-      isOpenApiCandidate: false,
+      isGraphQlCandidate: false,
     };
+  }
+
+  private isPotentialOpenApiResource(
+    resource: BcResource,
+    definitionUrl: string,
+  ): boolean {
+    const format = resource.format.toLowerCase();
+    const name = resource.name.toLowerCase();
+    const description = resource.description?.toLowerCase() ?? '';
+    const rawUrl = resource.url.toLowerCase();
+    const normalizedUrl = definitionUrl.toLowerCase();
+
+    if (format === 'openapi-json') {
+      return true;
+    }
+
+    if (rawUrl.includes('oas-editor.apps.gov.bc.ca/?url=')) {
+      return true;
+    }
+
+    return (
+      resource.bcdc_type === 'webservice' &&
+      ['json', 'yaml', 'yml', 'html'].includes(format) &&
+      (name.includes('openapi') ||
+        name.includes('swagger') ||
+        name.includes('oas') ||
+        description.includes('openapi') ||
+        description.includes('swagger') ||
+        description.includes('oas') ||
+        normalizedUrl.includes('openapi') ||
+        normalizedUrl.includes('swagger') ||
+        normalizedUrl.includes('/api-specs/'))
+    );
+  }
+
+  private isGraphQlResource(
+    resource: BcResource,
+    definitionUrl: string,
+  ): boolean {
+    const name = resource.name.toLowerCase();
+    const description = resource.description?.toLowerCase() ?? '';
+    const normalizedUrl = definitionUrl.toLowerCase();
+
+    return (
+      resource.bcdc_type === 'webservice' &&
+      (name.includes('graphql') ||
+        description.includes('graphql') ||
+        normalizedUrl.includes('/graphql'))
+    );
+  }
+
+  private getSpatialResourceType(
+    resource: BcResource,
+    definitionUrl: string | undefined,
+  ): SpatialResourceType | undefined {
+    const format = resource.format.toLowerCase();
+    const name = resource.name.toLowerCase();
+    const rawUrl = resource.url.toLowerCase();
+    const normalizedUrl = definitionUrl?.toLowerCase() ?? rawUrl;
+
+    if (normalizedUrl.includes('/featureserver')) {
+      return 'arcgis-featureserver';
+    }
+
+    if (normalizedUrl.includes('/mapserver')) {
+      return 'arcgis-mapserver';
+    }
+
+    if (
+      normalizedUrl.includes('governmentofbc.maps.arcgis.com/home/item.html') ||
+      name.includes('arcgis online') ||
+      name.includes('ago feature service')
+    ) {
+      return 'arcgis-online-item';
+    }
+
+    if (
+      format === 'wms' ||
+      (normalizedUrl.includes('service=wms') &&
+        normalizedUrl.includes('request=getcapabilities'))
+    ) {
+      return 'ogc-wms';
+    }
+
+    if (
+      format === 'kml' ||
+      normalizedUrl.endsWith('.kml') ||
+      normalizedUrl.includes('/kml/geo/layers/')
+    ) {
+      return 'kml-ground-overlay';
+    }
+
+    return undefined;
+  }
+
+  private async tryNormalizeOpenApiDefinition(
+    definition: string,
+  ): Promise<string | undefined> {
+    const parsed = await parseOpenApiDocument(definition);
+
+    if (parsed === undefined) {
+      return undefined;
+    }
+
+    return this.tryCompactJsonOpenApiDefinition(definition) ?? definition;
+  }
+
+  private tryCompactJsonOpenApiDefinition(
+    definition: string,
+  ): string | undefined {
+    try {
+      const parsed = JSON.parse(definition);
+
+      if (!this.isOpenApiObject(parsed)) {
+        return undefined;
+      }
+
+      return JSON.stringify(parsed);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private isOpenApiObject(value: unknown): value is Record<string, unknown> {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      ('openapi' in value || 'swagger' in value) &&
+      'paths' in value
+    );
   }
 
   private getDefinitionUrl(resourceUrl: string): string | undefined {
     const trimmedUrl = resourceUrl?.trim();
+
     if (!trimmedUrl) {
       return undefined;
     }
@@ -524,38 +809,23 @@ export class BcDataCatalogueEntityFactory {
     return url.trim().toLowerCase();
   }
 
-  private looksLikeOpenApiUrl(
-    resourceUrl: string,
-    definitionUrl: string,
-  ): boolean {
-    const raw = resourceUrl.toLowerCase();
-    const normalized = definitionUrl.toLowerCase();
-
-    if (raw.includes('oas-editor.apps.gov.bc.ca/?url=')) {
-      return true;
-    }
-
-    return (
-      normalized.includes('openapi') ||
-      normalized.includes('swagger') ||
-      normalized.includes('/api-specs/')
-    );
-  }
-
   private async tryReadDefinition(url: string): Promise<string | undefined> {
     try {
       const response = await this.reader.readUrl(url);
+
       return (await response.buffer()).toString();
     } catch (error) {
       this.logger.warn(
         `[BCDC Entity Factory] Failed to fetch API definition from ${url}: ${error}`,
       );
+
       return undefined;
     }
   }
 
   private getEmailHostname(email: string): string | undefined {
     const match = email.trim().toLowerCase().match(/@([\w.-]+)/);
+
     return match ? match[1] : undefined;
   }
 }

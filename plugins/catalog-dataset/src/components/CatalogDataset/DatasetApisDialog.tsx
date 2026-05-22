@@ -12,6 +12,7 @@ import {
 import { useApi } from '@backstage/core-plugin-api';
 import { catalogApiRef, EntityRefLink } from '@backstage/plugin-catalog-react';
 import { parseEntityRef, stringifyEntityRef } from '@backstage/catalog-model';
+import { isOpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import { useAsync } from 'react-use';
 
 type Props = {
@@ -76,18 +77,20 @@ export const DatasetApisDialog = ({
       }
 
       return apiEntities.map(api => {
-        const apiSpec = (api.spec ?? {}) as Record<string, any>;
-        const technicalReference =
-          (apiSpec.technicalReference as Record<string, any> | undefined) ?? {};
-        const environments = Array.isArray(apiSpec.environments)
-          ? apiSpec.environments
+        const apiSpec = (api.spec ?? {}) as Record<string, unknown>;
+        const isOpenApi = isOpenApiEntity(api);
+        const customMetadata = isOpenApi
+          ? api.metadata.customMetadata
+          : undefined;
+        const technicalReference = customMetadata?.technicalReference ?? {};
+        const environments = Array.isArray(customMetadata?.environments)
+          ? customMetadata.environments
           : [];
-        const isOpenApi = api.kind === 'OpenApi';
 
         return {
           entityRef: stringifyEntityRef(api),
           title: api.metadata.title ?? api.metadata.name,
-          type: apiSpec.type ?? '—',
+          type: typeof apiSpec.type === 'string' ? apiSpec.type : '—',
           security:
             isOpenApi && Array.isArray(technicalReference.authentication)
               ? technicalReference.authentication

@@ -1,12 +1,14 @@
 import { Card, CardContent, Link, Typography } from '@material-ui/core';
-import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { OpenApiEntity } from '../../types';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
-export const RelatedResourcesCard = ({ spec }: Props) => {
-  const relatedResources = spec.relatedResources ?? [];
+export const RelatedResourcesCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const relatedResources = bcdc?.relatedResources ?? [];
 
   return (
     <Card>
@@ -32,9 +34,7 @@ export const RelatedResourcesCard = ({ spec }: Props) => {
             ))}
           </ul>
         ) : (
-          <Typography variant="body2">
-            —
-          </Typography>
+          <Typography variant="body2">—</Typography>
         )}
       </CardContent>
     </Card>
