@@ -1,6 +1,6 @@
 import { Card, CardContent, Grid, Typography } from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
-import type { OpenApiEntity } from '../../types';
+import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
   entity: OpenApiEntity;

@@ -7,7 +7,10 @@ import {
   Link,
 } from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
-import type { OpenApiEntity, OpenApiEnvironment } from '../../types';
+import type {
+  OpenApiEntity,
+  OpenApiEnvironment,
+} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
   entity: OpenApiEntity;

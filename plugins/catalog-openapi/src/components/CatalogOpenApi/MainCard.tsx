@@ -1,6 +1,6 @@
 import { Card, CardContent, Typography } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-import type { OpenApiEntity } from '../../types';
+import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
   entity: OpenApiEntity;

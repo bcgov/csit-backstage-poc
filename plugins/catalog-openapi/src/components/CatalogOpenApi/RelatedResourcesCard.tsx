@@ -1,5 +1,5 @@
 import { Card, CardContent, Link, Typography } from '@material-ui/core';
-import type { OpenApiEntity } from '../../types';
+import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
   entity: OpenApiEntity;

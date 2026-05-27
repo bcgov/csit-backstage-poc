@@ -3,7 +3,7 @@ import { Grid, Card, CardContent, Typography, Link } from '@material-ui/core';
 import { EntityRelationWarning } from '@backstage/plugin-catalog';
 
 import { useEntity } from '@backstage/plugin-catalog-react';
-import { isOpenApiEntity } from '../../types';
+import { isOpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 import { MainCard } from './MainCard';
 
