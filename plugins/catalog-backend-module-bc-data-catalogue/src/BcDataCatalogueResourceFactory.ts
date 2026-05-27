@@ -137,6 +137,7 @@ export class BcDataCatalogueResourceFactory {
           resourceSafeName,
           resourceType: spatialResourceType,
           datasetEntityRef,
+          datasetTitle: pkg.title || pkg.name,
           bcdcDatasetResourceUrl,
         });
 

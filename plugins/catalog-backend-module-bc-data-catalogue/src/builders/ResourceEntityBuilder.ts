@@ -13,6 +13,7 @@ type BuildResourceEntityOptions = {
   resourceSafeName: string;
   resourceType: string;
   datasetEntityRef: string;
+  datasetTitle: string;
   bcdcDatasetResourceUrl: string;
 };
 
@@ -31,6 +32,7 @@ export class ResourceEntityBuilder {
       resourceSafeName,
       resourceType,
       datasetEntityRef,
+      datasetTitle,
       bcdcDatasetResourceUrl,
     } = options;
 
@@ -43,7 +45,7 @@ export class ResourceEntityBuilder {
       kind: 'Resource',
       metadata: {
         name: resourceSafeName,
-        title: resource.name,
+        title: `${datasetTitle} - ${resource.name}`,
         description: resource.description || 'No description available',
         links,
         tags,
