@@ -58,10 +58,8 @@ import {
   EntityKubernetesContent,
   isKubernetesAvailable,
 } from '@backstage/plugin-kubernetes';
-import { CatalogDatasetPage } from '@bcgov/plugin-catalog-dataset';
-import {
-  CatalogOpenApiDetailsContent,
-} from '@bcgov/plugin-catalog-openapi';
+import { EntityDatasetOverviewContent } from '@bcgov/plugin-catalog-dataset';
+import { CatalogOpenApiDetailsContent } from '@bcgov/plugin-catalog-openapi';
 import {
   DATASET_KIND,
   OPENAPI_API_TYPE,
@@ -324,7 +322,7 @@ const openApiApiPage = (
       {apiDefinitionContent}
     </EntityLayout.Route>
 
-    <EntityLayout.Route path="/catalog" title="Catalog">
+    <EntityLayout.Route path="/overview" title="Default Overview">
       {apiOverviewContent}
     </EntityLayout.Route>
   </EntityLayout>
@@ -446,6 +444,36 @@ const domainPage = (
   </EntityLayout>
 );
 
+const datasetOverviewContent = (
+  <Grid container spacing={3}>
+    {entityWarningContent}
+
+    <Grid item md={6}>
+      <EntityAboutCard />
+    </Grid>
+
+    <Grid item md={6} xs={12}>
+      <EntityCatalogGraphCard variant="gridItem" height={400} />
+    </Grid>
+
+    <Grid item md={4} xs={12}>
+      <EntityLinksCard />
+    </Grid>
+  </Grid>
+);
+
+const datasetPage = (
+  <EntityLayout>
+    <EntityLayout.Route path="/" title="Overview">
+      <EntityDatasetOverviewContent />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/overview" title="Default Overview">
+      {datasetOverviewContent}
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+
 export const entityPage = (
   <EntitySwitch>
     <EntitySwitch.Case if={isKind('component')} children={componentPage} />
@@ -454,7 +482,7 @@ export const entityPage = (
     <EntitySwitch.Case if={isKind('user')} children={userPage} />
     <EntitySwitch.Case if={isKind('system')} children={systemPage} />
     <EntitySwitch.Case if={isKind('domain')} children={domainPage} />
-    <EntitySwitch.Case if={isKind(DATASET_KIND)} children={<CatalogDatasetPage />} />
+    <EntitySwitch.Case if={isKind(DATASET_KIND)} children={datasetPage} />
 
     <EntitySwitch.Case>{defaultEntityPage}</EntitySwitch.Case>
   </EntitySwitch>

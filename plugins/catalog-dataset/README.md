@@ -21,7 +21,15 @@ It is intended to be used from the Backstage **entity page**, not as a standalon
 This plugin uses the Backstage entity context and is expected to be rendered through an entity page configuration such as:
 
 ```tsx
-<EntitySwitch.Case if={isKind('dataset')} children={<CatalogDatasetPage />} />
+const datasetPage = (
+  <EntityLayout>
+    <EntityLayout.Route path="/" title="Overview">
+      <EntityDatasetOverviewContent />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+
+<EntitySwitch.Case if={isKind('dataset')} children={datasetPage} />;
 ```
 
 In normal usage, users access this page by opening a `Dataset` entity from the Backstage catalog.

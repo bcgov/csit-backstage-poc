@@ -1,1 +1,2 @@
-export { catalogDatasetPlugin, CatalogDatasetPage } from './plugin';
+export { catalogDatasetPlugin } from './plugin';
+export { EntityDatasetOverviewContent } from './components/CatalogDataset';
