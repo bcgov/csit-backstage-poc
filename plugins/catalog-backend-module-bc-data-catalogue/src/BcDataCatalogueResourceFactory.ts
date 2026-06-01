@@ -1,4 +1,4 @@
-import { LoggerService, UrlReaderService } from '@backstage/backend-plugin-api';
+import { LoggerService } from '@backstage/backend-plugin-api';
 import {
   BcDataCatalogueSchemaUtils,
   type DatasetAccessMethod,
@@ -11,6 +11,7 @@ import type {
   BcResource,
 } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import { BcDataCatalogueNaming } from './BcDataCatalogueNaming';
+import { UrlReaderService } from './BcDataCatalogueUrlReader';
 import { ApiEntityBuilder } from './builders/ApiEntityBuilder';
 import { OpenApiEntityBuilder } from './builders/OpenApiEntityBuilder';
 import { ResourceEntityBuilder } from './builders/ResourceEntityBuilder';
@@ -22,7 +23,6 @@ type BcDataCatalogueResourceEntity = ApiEntity | OpenApiEntity | ResourceEntity;
 type BcDataCatalogueResourceFactoryOptions = {
   reader: UrlReaderService;
   logger: LoggerService;
-  allowedHosts: string[];
   naming: BcDataCatalogueNaming;
   schemaUtils: BcDataCatalogueSchemaUtils;
 };
@@ -67,7 +67,6 @@ type SpatialResourceType =
 export class BcDataCatalogueResourceFactory {
   private readonly reader: UrlReaderService;
   private readonly logger: LoggerService;
-  private readonly allowedHosts: string[];
   private readonly naming: BcDataCatalogueNaming;
   private readonly schemaUtils: BcDataCatalogueSchemaUtils;
   private readonly apiEntityBuilder: ApiEntityBuilder;
@@ -82,11 +81,11 @@ export class BcDataCatalogueResourceFactory {
   constructor(options: BcDataCatalogueResourceFactoryOptions) {
     this.reader = options.reader;
     this.logger = options.logger;
-    this.allowedHosts = options.allowedHosts;
     this.naming = options.naming;
     this.schemaUtils = options.schemaUtils;
     this.apiEntityBuilder = new ApiEntityBuilder({
       naming: this.naming,
+      reader: this.reader,
     });
     this.openApiEntityBuilder = new OpenApiEntityBuilder({
       naming: this.naming,
@@ -166,12 +165,6 @@ export class BcDataCatalogueResourceFactory {
     for (const candidate of apiResources) {
       const { apiResource, definitionUrl, definitionHost, isGraphQlCandidate } =
         candidate;
-
-      if (definitionHost && !this.allowedHosts.includes(definitionHost)) {
-        this.logger.warn(
-          `[BCDC Resource Factory] API definition host is NOT allowed: "${definitionHost}"`,
-        );
-      }
 
       let definitionContent = definitionUrl;
       let openApiDefinition: string | undefined;

@@ -1,10 +1,17 @@
 import { ApiEntity, EntityLink } from '@backstage/catalog-model';
 import type { BcResource } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
-import { buildClientSchema, getIntrospectionQuery, IntrospectionQuery, printSchema } from 'graphql';
+import {
+  buildClientSchema,
+  getIntrospectionQuery,
+  IntrospectionQuery,
+  printSchema,
+} from 'graphql';
 import { BcDataCatalogueNaming } from '../BcDataCatalogueNaming';
+import { UrlReaderService } from '../BcDataCatalogueUrlReader';
 
 type ApiEntityBuilderOptions = {
   naming: BcDataCatalogueNaming;
+  reader: UrlReaderService;
 };
 
 type BuildApiEntityOptions = {
@@ -24,9 +31,11 @@ type GraphQlIntrospectionResponse = {
 
 export class ApiEntityBuilder {
   private readonly naming: BcDataCatalogueNaming;
+  private readonly reader: UrlReaderService;
 
   constructor(options: ApiEntityBuilderOptions) {
     this.naming = options.naming;
+    this.reader = options.reader;
   }
 
   async build(options: BuildApiEntityOptions): Promise<ApiEntity> {
@@ -124,7 +133,7 @@ export class ApiEntityBuilder {
 
   private async fetchGraphQlSchema(url: string): Promise<string | undefined> {
     try {
-      const response = await fetch(url, {
+      const response = await this.reader.fetch(url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',

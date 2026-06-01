@@ -4,7 +4,7 @@ import {
   SystemEntity,
   UserEntity,
 } from '@backstage/catalog-model';
-import { LoggerService, UrlReaderService } from '@backstage/backend-plugin-api';
+import { LoggerService } from '@backstage/backend-plugin-api';
 import {
   BcDataCatalogueSchemaUtils,
   type DatasetEntity,
@@ -18,6 +18,7 @@ import {
   BcDataCatalogueResourceFactory,
   type ProcessedBcDataCatalogueResources,
 } from './BcDataCatalogueResourceFactory';
+import { UrlReaderService } from './BcDataCatalogueUrlReader';
 import { DatasetEntityBuilder } from './builders/DatasetEntityBuilder';
 import { GroupEntityBuilder } from './builders/GroupEntityBuilder';
 import { SystemEntityBuilder } from './builders/SystemEntityBuilder';
@@ -26,7 +27,6 @@ import { UserEntityBuilder } from './builders/UserEntityBuilder';
 type BcDataCatalogueEntityFactoryOptions = {
   reader: UrlReaderService;
   logger: LoggerService;
-  allowedHosts: string[];
 };
 
 export class BcDataCatalogueEntityFactory {
@@ -50,7 +50,6 @@ export class BcDataCatalogueEntityFactory {
     this.resourceFactory = new BcDataCatalogueResourceFactory({
       reader: options.reader,
       logger: this.logger,
-      allowedHosts: options.allowedHosts,
       naming: this.naming,
       schemaUtils: new BcDataCatalogueSchemaUtils(),
     });

@@ -1,13 +1,7 @@
-import {
-  LoggerService,
-  UrlReaderService,
-} from '@backstage/backend-plugin-api';
-import {
-  BcDataCataloguePackageSchema,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
-import type {
-  BcDataCataloguePackage,
-} from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import { LoggerService } from '@backstage/backend-plugin-api';
+import { BcDataCataloguePackageSchema } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import type { BcDataCataloguePackage } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
+import { UrlReaderService } from './BcDataCatalogueUrlReader';
 
 type BcDataCatalogueClientOptions = {
   reader: UrlReaderService;

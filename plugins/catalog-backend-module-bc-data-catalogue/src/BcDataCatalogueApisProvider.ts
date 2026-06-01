@@ -6,10 +6,10 @@ import {
 import {
   LoggerService,
   SchedulerServiceTaskRunner,
-  UrlReaderService,
 } from '@backstage/backend-plugin-api';
 import { BcDataCatalogueClient } from './BcDataCatalogueClient';
 import { BcDataCatalogueEntityFactory } from './BcDataCatalogueEntityFactory';
+import { UrlReaderService } from './BcDataCatalogueUrlReader';
 
 /**
  * Provides entities from the BC Data Catalogue service.
@@ -20,19 +20,16 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
   private readonly reader: UrlReaderService;
   private connection?: EntityProviderConnection;
   private readonly taskRunner: SchedulerServiceTaskRunner;
-  private readonly allowedHosts: string[];
 
   constructor(
     env: string,
     reader: UrlReaderService,
     taskRunner: SchedulerServiceTaskRunner,
-    allowedHosts: string[],
     logger: LoggerService,
   ) {
     this.env = env;
     this.reader = reader;
     this.taskRunner = taskRunner;
-    this.allowedHosts = allowedHosts;
     this.logger = logger;
   }
 
@@ -69,7 +66,6 @@ export class BcDataCatalogueApisProvider implements EntityProvider {
     const factory = new BcDataCatalogueEntityFactory({
       reader: this.reader,
       logger: this.logger,
-      allowedHosts: this.allowedHosts,
     });
 
     const packages = await client.getAllPackages();
