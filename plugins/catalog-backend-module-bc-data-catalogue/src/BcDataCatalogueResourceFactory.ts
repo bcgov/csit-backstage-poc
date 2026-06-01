@@ -14,11 +14,9 @@ import { BcDataCatalogueNaming } from './BcDataCatalogueNaming';
 import { UrlReaderService } from './BcDataCatalogueUrlReader';
 import { ApiEntityBuilder } from './builders/ApiEntityBuilder';
 import { OpenApiEntityBuilder } from './builders/OpenApiEntityBuilder';
-import { ResourceEntityBuilder } from './builders/ResourceEntityBuilder';
 
 type ApiEntity = Awaited<ReturnType<ApiEntityBuilder['build']>>;
-type ResourceEntity = ReturnType<ResourceEntityBuilder['build']>;
-type BcDataCatalogueResourceEntity = ApiEntity | OpenApiEntity | ResourceEntity;
+type BcDataCatalogueResourceEntity = ApiEntity | OpenApiEntity;
 
 type BcDataCatalogueResourceFactoryOptions = {
   reader: UrlReaderService;
@@ -57,13 +55,6 @@ type GenericWebserviceResource = {
   definitionHost?: string;
 };
 
-type SpatialResourceType =
-  | 'ogc-wms'
-  | 'kml-ground-overlay'
-  | 'arcgis-online-item'
-  | 'arcgis-mapserver'
-  | 'arcgis-featureserver';
-
 export class BcDataCatalogueResourceFactory {
   private readonly reader: UrlReaderService;
   private readonly logger: LoggerService;
@@ -71,11 +62,9 @@ export class BcDataCatalogueResourceFactory {
   private readonly schemaUtils: BcDataCatalogueSchemaUtils;
   private readonly apiEntityBuilder: ApiEntityBuilder;
   private readonly openApiEntityBuilder: OpenApiEntityBuilder;
-  private readonly resourceEntityBuilder: ResourceEntityBuilder;
   private readonly allApis = new Map<string, ApiEntity>();
   private readonly allOpenApis = new Map<string, OpenApiEntity>();
   private readonly allApiIds = new Set<string>();
-  private readonly allResourceIds = new Set<string>();
   private readonly openApiDefinitionToId = new Map<string, string>();
   private readonly genericApiDefinitionToId = new Map<string, string>();
 
@@ -91,9 +80,6 @@ export class BcDataCatalogueResourceFactory {
     this.openApiEntityBuilder = new OpenApiEntityBuilder({
       naming: this.naming,
     });
-    this.resourceEntityBuilder = new ResourceEntityBuilder({
-      naming: this.naming,
-    });
   }
 
   async processPackageResources(
@@ -107,7 +93,7 @@ export class BcDataCatalogueResourceFactory {
     const entities: BcDataCatalogueResourceEntity[] = [];
     const providesApis: string[] = [];
     const excludedDatasetResourceIds = new Set<string>();
-    const accessMethodEntityRefs = new Map<string, string>();
+    const spatialAccessMethodResourceIds = new Set<string>();
     const datasetTags = new Set<string>();
 
     pkg.resources?.forEach(resource => {
@@ -115,35 +101,10 @@ export class BcDataCatalogueResourceFactory {
       const definitionHost = definitionUrl
         ? this.getUrlHost(definitionUrl)
         : undefined;
-      const spatialResourceType = this.getSpatialResourceType(
-        resource,
-        definitionUrl,
-      );
 
-      if (spatialResourceType) {
-        const resourceSafeName = this.buildResourceSafeName(
-          pkg.name,
-          resource.name,
-          spatialResourceType,
-          resource.id,
-        );
-        const resourceId = this.naming.getResourceId(resourceSafeName);
-        const bcdcDatasetResourceUrl = `${bcdcDatasetUrl}/resource/${resource.id}`;
-
-        const resourceEntity = this.resourceEntityBuilder.build({
-          resource,
-          ownerGroupId,
-          systemId,
-          resourceSafeName,
-          resourceType: spatialResourceType,
-          datasetEntityRef,
-          datasetTitle: pkg.title || pkg.name,
-          bcdcDatasetResourceUrl,
-        });
-
-        entities.push(resourceEntity);
-        accessMethodEntityRefs.set(resource.id, resourceId);
-        datasetTags.add('has-spatial-resource');
+      if (this.isSpatialAccessMethodResource(resource, definitionUrl)) {
+        spatialAccessMethodResourceIds.add(resource.id);
+        datasetTags.add('has-spatial-access-method');
         return;
       }
 
@@ -300,11 +261,12 @@ export class BcDataCatalogueResourceFactory {
     const accessMethods = this.buildAccessMethods(
       pkg,
       excludedDatasetResourceIds,
-      accessMethodEntityRefs,
+      spatialAccessMethodResourceIds,
     );
     const relatedResources = this.buildRelatedResources(
       pkg,
       excludedDatasetResourceIds,
+      spatialAccessMethodResourceIds,
     );
     const schema = this.schemaUtils.buildDatasetSchema(pkg.resources);
 
@@ -321,6 +283,7 @@ export class BcDataCatalogueResourceFactory {
   private buildRelatedResources(
     pkg: BcDataCataloguePackage,
     excludedDatasetResourceIds: Set<string>,
+    spatialAccessMethodResourceIds: Set<string>,
   ): Array<{ url: string; title?: string }> {
     const relatedResources: Array<{ url: string; title?: string }> = [];
 
@@ -338,7 +301,10 @@ export class BcDataCatalogueResourceFactory {
         return;
       }
 
-      if (resource.bcdc_type === 'geographic') {
+      if (
+        resource.bcdc_type === 'geographic' ||
+        spatialAccessMethodResourceIds.has(resource.id)
+      ) {
         return;
       }
 
@@ -356,7 +322,7 @@ export class BcDataCatalogueResourceFactory {
   private buildAccessMethods(
     pkg: BcDataCataloguePackage,
     excludedDatasetResourceIds: Set<string>,
-    accessMethodEntityRefs: Map<string, string>,
+    spatialAccessMethodResourceIds: Set<string>,
   ): DatasetAccessMethod[] {
     const accessMethods: DatasetAccessMethod[] = [];
 
@@ -365,9 +331,10 @@ export class BcDataCatalogueResourceFactory {
         return;
       }
 
-      const entityRef = accessMethodEntityRefs.get(resource.id);
-
-      if (resource.bcdc_type === 'geographic' && !entityRef) {
+      if (
+        resource.bcdc_type === 'geographic' &&
+        !spatialAccessMethodResourceIds.has(resource.id)
+      ) {
         return;
       }
 
@@ -377,23 +344,16 @@ export class BcDataCatalogueResourceFactory {
           title: resource.name,
           description: resource.description,
           url: resource.url,
-          type: entityRef
-            ? this.getEntityBackedAccessMethodType(entityRef)
+          type: spatialAccessMethodResourceIds.has(resource.id)
+            ? 'spatial-resource'
             : resource.bcdc_type,
           format: resource.format,
           updateFrequency: resource.resource_update_cycle,
-          ...(entityRef ? { entityRef } : {}),
         });
       }
     });
 
     return accessMethods;
-  }
-
-  private getEntityBackedAccessMethodType(entityRef: string): string {
-    return entityRef.startsWith('resource:')
-      ? 'spatial-resource'
-      : 'catalog-resource';
   }
 
   private async createGenericApiEntity(options: {
@@ -503,41 +463,6 @@ export class BcDataCatalogueResourceFactory {
     return candidateName;
   }
 
-  private buildResourceSafeName(
-    datasetName: string,
-    resourceName: string,
-    resourceType: SpatialResourceType,
-    resourceId: string,
-  ): string {
-    const baseName = this.naming.toSafeName(
-      `${datasetName}-${resourceName}-${resourceType}`,
-    );
-    const baseResourceId = this.naming.getResourceId(baseName);
-
-    if (!this.allResourceIds.has(baseResourceId)) {
-      this.allResourceIds.add(baseResourceId);
-      return baseName;
-    }
-
-    const resourceIdSuffix = this.naming.toSafeName(resourceId);
-    let candidateName = this.appendSuffix(baseName, resourceIdSuffix);
-    let candidateResourceId = this.naming.getResourceId(candidateName);
-
-    let counter = 1;
-
-    while (this.allResourceIds.has(candidateResourceId)) {
-      candidateName = this.appendSuffix(
-        baseName,
-        `${resourceIdSuffix}-${counter}`,
-      );
-      candidateResourceId = this.naming.getResourceId(candidateName);
-      counter++;
-    }
-
-    this.allResourceIds.add(candidateResourceId);
-    return candidateName;
-  }
-
   private appendSuffix(baseName: string, suffix: string): string {
     const safeSuffix = this.naming.toSafeName(suffix || 'item');
     const suffixWithSeparator = `-${safeSuffix}`;
@@ -630,48 +555,28 @@ export class BcDataCatalogueResourceFactory {
     );
   }
 
-  private getSpatialResourceType(
+  private isSpatialAccessMethodResource(
     resource: BcResource,
     definitionUrl: string | undefined,
-  ): SpatialResourceType | undefined {
+  ): boolean {
     const format = resource.format.toLowerCase();
     const name = resource.name.toLowerCase();
     const rawUrl = resource.url.toLowerCase();
     const normalizedUrl = definitionUrl?.toLowerCase() ?? rawUrl;
 
-    if (normalizedUrl.includes('/featureserver')) {
-      return 'arcgis-featureserver';
-    }
-
-    if (normalizedUrl.includes('/mapserver')) {
-      return 'arcgis-mapserver';
-    }
-
-    if (
+    return (
+      normalizedUrl.includes('/featureserver') ||
+      normalizedUrl.includes('/mapserver') ||
       normalizedUrl.includes('governmentofbc.maps.arcgis.com/home/item.html') ||
       name.includes('arcgis online') ||
-      name.includes('ago feature service')
-    ) {
-      return 'arcgis-online-item';
-    }
-
-    if (
+      name.includes('ago feature service') ||
       format === 'wms' ||
       (normalizedUrl.includes('service=wms') &&
-        normalizedUrl.includes('request=getcapabilities'))
-    ) {
-      return 'ogc-wms';
-    }
-
-    if (
+        normalizedUrl.includes('request=getcapabilities')) ||
       format === 'kml' ||
       normalizedUrl.endsWith('.kml') ||
       normalizedUrl.includes('/kml/geo/layers/')
-    ) {
-      return 'kml-ground-overlay';
-    }
-
-    return undefined;
+    );
   }
 
   private async tryNormalizeOpenApiDefinition(
