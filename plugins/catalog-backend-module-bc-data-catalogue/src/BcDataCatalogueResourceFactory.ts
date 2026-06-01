@@ -77,6 +77,7 @@ export class BcDataCatalogueResourceFactory {
   private readonly allApiIds = new Set<string>();
   private readonly allResourceIds = new Set<string>();
   private readonly openApiDefinitionToId = new Map<string, string>();
+  private readonly genericApiDefinitionToId = new Map<string, string>();
 
   constructor(options: BcDataCatalogueResourceFactoryOptions) {
     this.reader = options.reader;
@@ -186,7 +187,7 @@ export class BcDataCatalogueResourceFactory {
         definitionContent = openApiDefinition;
 
         const normalizedDefinitionUrl =
-          this.normalizeOpenApiDefinitionUrl(definitionUrl);
+          this.normalizeApiDefinitionUrl(definitionUrl);
         const existingOpenApiId = this.openApiDefinitionToId.get(
           normalizedDefinitionUrl,
         );
@@ -269,7 +270,9 @@ export class BcDataCatalogueResourceFactory {
         bcdcDatasetResourceUrl,
       });
 
-      providesApis.push(apiId);
+      if (!providesApis.includes(apiId)) {
+        providesApis.push(apiId);
+      }
       excludedDatasetResourceIds.add(apiResource.id);
       datasetTags.add('has-graphql-api');
     }
@@ -287,7 +290,9 @@ export class BcDataCatalogueResourceFactory {
         bcdcDatasetResourceUrl,
       });
 
-      providesApis.push(apiId);
+      if (!providesApis.includes(apiId)) {
+        providesApis.push(apiId);
+      }
       excludedDatasetResourceIds.add(generic.resource.id);
       datasetTags.add('has-generic-api');
     }
@@ -412,6 +417,28 @@ export class BcDataCatalogueResourceFactory {
       bcdcDatasetResourceUrl,
     } = options;
 
+    const normalizedDefinitionUrl = this.normalizeApiDefinitionUrl(definitionUrl);
+    const existingApiId =
+      this.genericApiDefinitionToId.get(normalizedDefinitionUrl);
+
+    if (existingApiId) {
+      const existingApi = this.allApis.get(existingApiId);
+
+      this.logger.warn(
+        '[BCDC Resource Factory] ' +
+          `Duplicate generic API definition detected for "${normalizedDefinitionUrl}".\n` +
+          `Existing API: name="${existingApi?.metadata.name ?? existingApiId}", ` +
+          `resource-url="${existingApi?.metadata.annotations?.['bcdata.gov.bc.ca/resource-url'] ?? ''}".\n` +
+          `New API resource: name="${apiResource.name}", ` +
+          `bcdc_type="${apiResource.bcdc_type}", ` +
+          `format="${apiResource.format}", ` +
+          `resource-url="${apiResource.url}".\n` +
+          `Reusing existing API entity.`,
+      );
+
+      return existingApiId;
+    }
+
     const apiSafeName = this.buildApiSafeName(
       apiResource.name,
       definitionHost,
@@ -420,6 +447,7 @@ export class BcDataCatalogueResourceFactory {
     const apiId = this.naming.getApiId(apiSafeName);
 
     if (this.allApis.has(apiId)) {
+      this.genericApiDefinitionToId.set(normalizedDefinitionUrl, apiId);
       return apiId;
     }
 
@@ -434,6 +462,7 @@ export class BcDataCatalogueResourceFactory {
     });
 
     this.allApis.set(apiId, apiEntity);
+    this.genericApiDefinitionToId.set(normalizedDefinitionUrl, apiId);
     entities.push(apiEntity);
 
     return apiId;
@@ -711,7 +740,7 @@ export class BcDataCatalogueResourceFactory {
     }
   }
 
-  private normalizeOpenApiDefinitionUrl(url: string): string {
+  private normalizeApiDefinitionUrl(url: string): string {
     const trimmedUrl = url.trim();
 
     try {
