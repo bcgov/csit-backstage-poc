@@ -712,7 +712,32 @@ export class BcDataCatalogueResourceFactory {
   }
 
   private normalizeOpenApiDefinitionUrl(url: string): string {
-    return url.trim().toLowerCase();
+    const trimmedUrl = url.trim();
+
+    try {
+      const parsedUrl = new URL(trimmedUrl);
+      const protocol =
+        parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:'
+          ? 'http'
+          : parsedUrl.protocol.replace(/:$/, '').toLowerCase();
+      const host = parsedUrl.host.toLowerCase();
+      const pathname =
+        parsedUrl.pathname === '/'
+          ? ''
+          : parsedUrl.pathname.replace(/\/+$/, '').toLowerCase();
+      const sortedSearchParams = [...parsedUrl.searchParams.entries()].sort(
+        ([leftKey, leftValue], [rightKey, rightValue]) =>
+          leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue),
+      );
+      const searchParams = new URLSearchParams(sortedSearchParams);
+      const queryString = searchParams.toString();
+
+      return `${protocol}://${host}${pathname}${
+        queryString ? `?${queryString}` : ''
+      }`;
+    } catch {
+      return trimmedUrl.toLowerCase();
+    }
   }
 
   private async tryReadDefinition(url: string): Promise<string | undefined> {
