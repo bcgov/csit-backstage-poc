@@ -2,7 +2,7 @@ import { Card, CardContent, Grid, Link, Typography } from '@material-ui/core';
 import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 const renderValue = (value?: string) =>
@@ -26,8 +26,10 @@ const CodeBlock = ({ content }: { content?: string }) => {
   );
 };
 
-export const TechnicalReferenceCard = ({ spec }: Props) => {
-  const technicalReference = spec.technicalReference;
+export const TechnicalReferenceCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const technicalReference = bcdc?.technicalReference;
   const endpoints = technicalReference?.endpoints ?? [];
 
   return (
@@ -60,10 +62,14 @@ export const TechnicalReferenceCard = ({ spec }: Props) => {
         {technicalReference?.baseUrls?.length ? (
           <div style={{ marginBottom: 24 }}>
             {technicalReference.baseUrls.map(baseUrl => (
-              <Grid container spacing={1} key={`${baseUrl.name}-${baseUrl.description}`}>
+              <Grid
+                container
+                spacing={1}
+                key={`${baseUrl.name}-${baseUrl.description}`}
+              >
                 <Grid item xs={12} sm={3}>
                   <Typography variant="body2" style={{ fontWeight: 700 }}>
-                    {baseUrl.name}:
+                    {renderValue(baseUrl.name)}:
                   </Typography>
                 </Grid>
                 <Grid item xs={12} sm={9}>
@@ -88,9 +94,11 @@ export const TechnicalReferenceCard = ({ spec }: Props) => {
           <div style={{ marginBottom: 24 }}>
             {endpoints.map(endpoint => {
               const hasExampleRequest =
-                endpoint.exampleRequest && endpoint.exampleRequest.trim() !== '';
+                endpoint.exampleRequest &&
+                endpoint.exampleRequest.trim() !== '';
               const hasExampleResponse =
-                endpoint.exampleResponse && endpoint.exampleResponse.trim() !== '';
+                endpoint.exampleResponse &&
+                endpoint.exampleResponse.trim() !== '';
 
               return (
                 <div
@@ -104,12 +112,14 @@ export const TechnicalReferenceCard = ({ spec }: Props) => {
                   }}
                 >
                   <Typography variant="body2">
-                    <strong>{endpoint.method}</strong> {endpoint.path}
+                    <strong>{renderValue(endpoint.method)}</strong>{' '}
+                    {renderValue(endpoint.path)}
                   </Typography>
 
                   {endpoint.authentication ? (
                     <Typography variant="body2" style={{ marginTop: 8 }}>
-                      <strong>Authentication:</strong> {endpoint.authentication}
+                      <strong>Authentication:</strong>{' '}
+                      {endpoint.authentication}
                     </Typography>
                   ) : null}
 

@@ -1,701 +1,193 @@
-#
+# BC Data Catalog Gaps
 
-## Dataset
+This document records the current implementation mapping from BC Data Catalogue (BCDC) package/resource fields into Backstage catalog entities.
 
-## BC Data Catalogue
+The implementation currently creates:
 
-Primary purpose is to provide access to public data rather than document datasets and APIs.
+- a custom `Dataset` entity using `apiVersion: bcgov.io/v1alpha1` and `kind: Dataset`;
+- built-in Backstage `API` entities using `apiVersion: backstage.io/v1alpha1` and `kind: API`;
+- related `Group`, `System`, and `User` entities used for ownership and organization structure.
 
-### BC Data Catalogue Onboarding
-#### Checklist
-- The data MUST be free of Personal Information that may directly identify an individual?
+`GAP` means the field is present in the implemented entity shape but is not currently populated from BCDC or OpenAPI source data.
 
-- The data MUST be free of information that may indirectly identify an individual? (Exceptions do not apply to our use case)
+## Implementation notes
 
-- The data MUST NOT include intellectual property.
+### Ownership and supporting entities
 
-- The data MUST be created solely by BC Government employees.
+| Implemented behaviour | Source | Backstage mapping | Notes / gaps |
+|---|---|---|---|
+| Government of British Columbia parent group | hardcoded `gov.bc.ca` | `Group` | Serves as the parent Organization group |
+| Organization group | `pkg.organization.name`, `pkg.organization.title` | `Group` | Organization groups are children of the `gov.bc.ca` group. |
+| Organization system | `pkg.organization` | `System` | Dataset and API entities reference this system. |
+| Contact users | `pkg.contacts[].email`, `pkg.contacts[].name` | `User` | Contact users are created and associated to groups by email host. Contact details are **not** currently used to populate Dataset/API support channel fields. |
 
-- The data MUST only include content owned by the BC Government.
+### API resource detection
 
-- There MUST not be an existing exclusive licence for aother party to use or access the materials.
-
-- The public release of the data MUST be permittable under law, contract, or policy.
-
-- The data MUST be available to the public without collecting a fee.
-
-- The data MUST be complete, not a subset.
-
-- The data MUST be provided in a machine readable format.
+| Implemented behaviour | Source / logic | Result | Notes / gaps |
+|---|---|---|---|
+| Extract definition URL | `resource.url`; if URL contains query parameter `url`, use that nested value | candidate definition URL | Invalid or blank URLs are ignored. |
+| Detect OpenAPI candidates | `resource.format === 'openapi-json'`, or `resource.bcdc_type === 'webservice'` with `json`, `xml`, or `html` format and URL that appears OpenAPI-related | candidate may become OpenAPI-backed `API` | The definition is fetched and parsed before being treated as OpenAPI. |
+| Exclude non-API resources from API creation | non-`webservice` resources, plus `kml`, `wms`, `arcgis_rest`, and `xml` generic resources | no `API` entity | These may still appear on the Dataset as access methods / related resources. |
+| De-duplicate OpenAPI resources | normalized definition URL | reuse existing OpenAPI-backed `API` entity | Dataset `spec.providesApis` points at the reused API entity. |
+| Generic API resources | qualifying `webservice` resources that are not parsed as OpenAPI | built-in `API` entity | `spec.definition` is the resource URL or nested definition URL, not parsed OpenAPI content. |
 
 ## BC Data Catalog → Backstage Dataset UI Mapping
 
-### Detailed Mapping Table
+### Actual implemented mapping
 
 | UI section | UI property | BC Data Catalog source | Transformation / logic | Backstage mapping | Notes / gaps |
 |---|---|---|---|---|---|
-|**main**|title|title|direct|entity.metadata.title|—|
-|---|description|notes|direct|entity.metadata.description|—|
-|---|tags|tags[].display_name|direct|entity.metadata.tags|—|
-|---|Part of Connected Services|---|not available|custom|gap|
-|---|Learn more|more_info[]|direct|entity.metadata.links|—|
-|---|Type|---|not available|custom|gap|
-|---|Custodian|organization.title|direct|entity.spec.owner|The BCDC Organizations are currently being mapped to Backstage Groups|
-|---|Status|publish_state|direct (mapping)|entity.spec.status|[PENDING ARCHIVE, PUBLISHED]|
-|---|Security Classification|security_class|direct (mapping)|entity.spec.securityClassification|[PROTECTED A, PROTECTED B, PROTECTED C, PUBLIC]|
-|---|Data quality Score|---|not available|custom|gap|
-|---|Update frequency|---|not available|custom|gap - We have an update frequecy for the access methods but not for the Dataset as a whole|
-|---|Retention|---|not available|custom|gap|
-|---|View APIs - Button|resources[]|direct|/catalog?filters[kind]=API&filters[relations.providedBy]=entityRef|When an API is created based on an API resource we can define the relationship in Backstage|
-|---|View APIs - Dialog - title|entity.metadata.title|direct|openapi.title||
-|---|View APIs - Dialog - Type|---|not available|custom|gap|
-|---|View APIs - Dialog - Security|entity.spec.definition|direct|openapi.security|—|
-|---|View APIs - Dialog - Environments|entity.spec.definition|direct|openapi.environments|—|
-|---|Technical documentation|---|not available|direct|gap|
-|---|View Data Dictionary|---|not available|direct|gap - The Data Dictionary and Schema terminology are being used interchangably and inconsistently in the design.  We need to clarify these concepts.|
-|---|Download schema|resources[].resource_type=='data'|custom|custom|gap- There is no downloadable schema.  We would need to identify if/how we want to format the 'data' resource type as a file and then create an endpoint to create it.|
-|---|Need help?|contacts[]|map to support info|custom|It is not clear from the page mockups what is expected from the link.|
-|**About this Dataset**|description|purpose|direct|custom|—|
-|***Authoritative Designation***|description|---|not available|custom|gap -  Maybe this is just boilerplate that we show if the Dataset has a specific tag sesignating it as an Authoritative Data Source|
-|***Access Methods***|APIs|resources[]|direct|spec.providesApis|When an API is created based on an API resource we can define the relationship in Backstage|
-|---|other|resources[]|direct|custom|Not sure how or if we are going to surface non-API dataset resources.  Is this jsut a link like in BCDC or a first class entity like an API?|
-|***Schema***|Table name|resource[].object_name|direct|custom|The prototype does not include the Table Name or show multiple objects in the schema.  This is section is labeled as Data Dictionary in the prototype but appears to be just the Schema.|
-|---|Field name|resource[].details[].column_name|direct|custom|—|
-|---|Type|resource[].details[].data_type|direct|custom|—|
-|---|Description|resource[].details[].column_comments|direct|custom|—|
-|***Fields & definitions***|field name|---|not available|custom|gap -  There is a lot of similarity and overlap here with **Schema**.  Not sure if we need both or if we would just provide differnt formatting to the same source of schema data.  We don't have a data source for this.|
-|---|Definition|---|not available|custom|gap|
-|---|Semantic Domain|---|not available|custom|gap|
-|---|Meaning of Values|---|not available|custom|gap|
-|---|Business Rules|---|not available|custom|gap|
-|---|Relationships|---|not available|custom|gap|
-|---|Governance|---|not available|custom|gap|
-|***Lineage and Quality***|Source System|---|not available|custom|gap|
-|---|Transformation|lineage_statement|direct|custom|—|
-|---|Validation|---|not available|custom|gap|
-|---|Lineage refresh||---|not available|custom|gap|
-|---|Quality controls include|---|not available|custom|gap|
-|***Versioning and Change Governance***|Current Version|---|not available|custom|gap - BCDC version is not populated|
-|---|Initial Release|record_publish_date|direct|custom|—|
-|---|Last Updated|record_last_modified|direct|custom|—|
-|---|description|---|not available|custom|gap|
-|---|Governance and Usage Constraints|---|not available|custom|gap|
-|***Support***|description|organization.description|direct|custom|—|
-|---|Dataset Owernership - Data Custodian|organization.title|direct|entity.spec.owner|Is this a duplicate of **main** Custodian?|
-|---|Dataset Owernership - Governance Authority|---|not available|custom|gap|
-|---|Support Pathways|---|not available|custom|Is this boilerplate?|
-|---|Data and Semantics - description|---|not available|custom|Is this boilerplate?|
-|---|Data and Semantics - Channel|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Data and Semantics - Response time|---|not available|custom|gap|
-|---|Data and Semantics - Escalation|---|not available|custom|gap|
-|---|Access and Integration - description|---|not available|custom|Is this boilerplate?|
-|---|Access and Integration - Channel|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Access and Integration - Response time|---|not available|custom|gap|
-|---|Access and Integration - Escalation|---|not available|custom|gap|
-|---|Governance and Produciton Escalation - description|---|not available|custom|gap|
-|---|Governance and Produciton Escalation - Channel|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Governance and Produciton Escalation - Reference dataset name + version + environment|---|not available|custom|Not sure what this is.  Is this a typo?|
-|---|Governance and Produciton Escalation - Response time|---|not available|custom|gap|
-|***Related resources***|link|more_info[].url + resources[].url|merge arrays|entity.metadata.links|Do we want to dump all of the relations here or just show links to resources that have not already been linked above in **Lean more** and **Access Methods**?|
----
-
-### DatasetEntity Design Table
-
-| UI section | UI property | Recommended entity representation | Notes |
-|---|---|---|---|
-| main | title | `metadata.title` | Standard Backstage metadata field. |
-| main | description | `metadata.description` | Standard Backstage metadata field. |
-| main | tags | `metadata.tags: string[]` | Standard Backstage metadata field. |
-| main | Part of Connected Services | `spec.connectedServicesDescription` | Simple text field; descriptive only (not relationships). |
-| main | Learn more | `metadata.links` | Standard Backstage metadata field. |
-| main | Type | `spec.type` | Dataset-level functional type. |
-| main | Custodian | `spec.owner` | Standard Backstage ownership field. |
-| main | Status | `spec.status` | Normalized enum, e.g. `published`, `pending-archive`, `unknown`. |
-| main | Security Classification | `spec.securityClassification` | Normalized enum, e.g. `public`, `protected-a`, etc. |
-| main | Data quality Score | `spec.quality.score` | Nested quality object. |
-| main | Update frequency | `spec.updateFrequency` | Dataset-level value; may be derived from resources for now. |
-| main | Retention | `spec.governance.retention` | Governance concern; nested structure fits better. |
-| main | View APIs | derived from `spec.providesApis` | Do not duplicate as a display field; derive from API relationships. |
-| main | Technical documentation | `metadata.annotations['backstage.io/techdocs-ref']` | Standard Backstage TechDocs integration. |
-| main | Download schema | not stored in entity | UI constructs URL dynamically from dataset/resource identifiers. |
-| main | Need help? | `spec.support.primary` | Derived/selected support contact or support channel. |
-| About this Dataset | description | `spec.about.description` | Separate from `metadata.description` if richer/domain-specific text is needed. |
-| About this Dataset | It includes | not stored in entity | Covered by description for now. |
-| About this Dataset | Intended Use | not stored in entity | Covered by description for now. |
-| About this Dataset | Not Intended For | not stored in entity | Covered by description for now. |
-| Authoritative Designation | authoritative for | `spec.authoritativeDesignation.authoritativeFor` | Nested object leaves room for future related fields. |
-| Access Methods | APIs | derived from `spec.providesApis` | Prefer relationships over duplication. |
-| Access Methods | other | `spec.accessMethods: DatasetAccessMethod[]` | Non-API resource access methods belong in spec. |
-| Schema | Table name | `spec.schema.tables[].name` | Supports multiple tables per dataset. |
-| Schema | Field name | `spec.schema.tables[].fields[].name` | Nested under table. |
-| Schema | Type | `spec.schema.tables[].fields[].type` | Nested under table. |
-| Schema | Format | `spec.schema.tables[].fields[].format` | Optional; only if distinct from type. |
-| Schema | Required | `spec.schema.tables[].fields[].required` | Boolean. |
-| Fields & definitions | Entity name | `spec.entityDefinitions.entities[].name` | Top-level grouping for fields/definitions. |
-| Fields & definitions | field name | `spec.entityDefinitions.entities[].fields[].name` | Nested under entity. |
-| Fields & definitions | Definition | `spec.entityDefinitions.entities[].fields[].definition` | Field-level definition. |
-| Fields & definitions | Semantic Domain | `spec.entityDefinitions.entities[].fields[].semanticDomain` | Optional field-level attribute. |
-| Fields & definitions | Meaning of Values | `spec.entityDefinitions.entities[].fields[].meaningOfValues` | Optional field-level attribute. |
-| Fields & definitions | Business Rules | `spec.entityDefinitions.entities[].fields[].businessRules` | Optional field-level attribute. |
-| Fields & definitions | Relationships | `spec.entityDefinitions.entities[].fields[].relationships` | `string[]` for now; can evolve later. |
-| Fields & definitions | Governance | `spec.entityDefinitions.entities[].fields[].governance` | Optional field-level attribute. |
-| Lineage and Quality | Source System | `spec.lineage.sourceSystem` | Single source system (string). |
-| Lineage and Quality | Transformation | `spec.lineage.transformation` | Free-text lineage statement. |
-| Lineage and Quality | Validation | `spec.quality.validation` | Quality concern; nested structure. |
-| Lineage and Quality | Lineage refresh | `spec.lineage.refresh` | String/date/interval depending source maturity. |
-| Lineage and Quality | Quality controls include | `spec.quality.controls: string[]` | Nested quality object. |
-| Versioning and Change Governance | Current Version | `spec.versioning.currentVersion` | Keep versioning grouped. |
-| Versioning and Change Governance | Initial Release | `spec.versioning.initialRelease` | ISO date string. |
-| Versioning and Change Governance | Last Updated | `spec.versioning.lastUpdated` | ISO date string. |
-| Versioning and Change Governance | description | `spec.versioning.description` | Free-text version/change notes. |
-| Versioning and Change Governance | Governance and Usage Constraints | `spec.governance.usageConstraints` | Governance concern; nested structure. |
-| Support | description | `spec.support.description` | Section-level support description. |
-| Support | Dataset Ownership - Data Custodian | `spec.support.dataCustodian` | Kept separate from `spec.owner`; owner is canonical, this is display-oriented. |
-| Support | Dataset Ownership - Governance Authority | `spec.support.governanceAuthority` | Display/support field. |
-| Support | Support Pathways | `spec.support.pathways` | Simple text description. |
-| Support | Data and Semantics - description | `spec.support.dataAndSemantics.description` | Nested support channel category. |
-| Support | Data and Semantics - Channel | `spec.support.dataAndSemantics.channel` | Simple text field for now; structure can evolve later. |
-| Support | Data and Semantics - Response time | `spec.support.dataAndSemantics.responseTime` | Simple string unless SLA structure is needed. |
-| Support | Data and Semantics - Escalation | `spec.support.dataAndSemantics.escalation` | Simple string for now. |
-| Support | Access and Integration - description | `spec.support.accessAndIntegration.description` | Nested support channel category. |
-| Support | Access and Integration - Channel | `spec.support.accessAndIntegration.channel` | Simple text field for now; structure can evolve later. |
-| Support | Access and Integration - Response time | `spec.support.accessAndIntegration.responseTime` | Simple string. |
-| Support | Access and Integration - Escalation | `spec.support.accessAndIntegration.escalation` | Simple string. |
-| Support | Governance and Produciton Escalation - description | `spec.support.governanceAndProductionEscalation.description` | Nested support channel category. |
-| Support | Governance and Produciton Escalation - Channel | `spec.support.governanceAndProductionEscalation.channel` | Simple text field for now; structure can evolve later. |
-| Support | Governance and Produciton Escalation - Reference dataset name + version + environment | `spec.support.governanceAndProductionEscalation.referenceDataset` | Simple text field for now. |
-| Support | Governance and Produciton Escalation - Response time | `spec.support.governanceAndProductionEscalation.responseTime` | Simple string. |
-| Related resources | link | `spec.relatedResources: Array<{ url: string; title?: string }>` | Kept separate from `metadata.links` if UI needs curated related resources. |
-
+| **main** | title | `pkg.title` or `pkg.name` | fallback to package name | `entity.metadata.title` | Implemented. |
+| **main** | description | `pkg.notes` | fallback to `No description available` | `entity.metadata.description`; also `entity.spec.description` | Implemented. |
+| **main** | tags | `pkg.tags[].display_name` | normalized through `BcDataCatalogueNaming.toSafeName` | `entity.metadata.tags` | Additional implementation tags are added: `has-schema` / `has-no-schema`, schema table count buckets, and factory-added `has-api` / `has-openapi`.  These tags are added to make it easier to find examples in the Catalog during development and demonstrations |
+| **main** | Part of Connected Services | none | hardcoded `GAP` | `entity.spec.connectedServicesDescription` | Gap. |
+| **main** | Learn more | BCDC dataset URL and `pkg.more_info[]` | always adds BC Data Catalogue Record link; appends `more_info` links | `entity.metadata.links` | Implemented. |
+| **main** | Type | none | hardcoded `GAP` | `entity.spec.type` | Gap. |
+| **main** | Custodian | `pkg.organization.name`, `pkg.organization.title` | organization is mapped to a Backstage group | `entity.spec.owner` | Implemented as owner group id, not display title. |
+| **main** | System | `pkg.organization.name` | organization is mapped to a Backstage system | `entity.spec.system` | Implemented. |
+| **main** | Status | `pkg.publish_state` | `PUBLISHED` → `Published`; `PENDING ARCHIVE` → `Pending Archive`; otherwise `Unknown` | `entity.spec.status` | Implemented. |
+| **main** | Security Classification | `pkg.security_class` | normalized to `Public`, `Protected A`, `Protected B`, `Protected C`, or `Unknown` | `entity.spec.securityClassification` | Implemented. |
+| **main** | Data quality Score | none | hardcoded `GAP` | `entity.spec.quality.score` | Gap. |
+| **main** | Update frequency | none at dataset level | hardcoded `GAP` | `entity.spec.updateFrequency` | Gap. Resource-level update frequency is captured on access methods. |
+| **main** | Retention | none | hardcoded `GAP` | `entity.spec.governance.retention` | Gap. |
+| **main** | View APIs | qualifying API resources | API entity refs are accumulated during factory processing | `entity.spec.providesApis` | Implemented. Factory appends refs for generic API and OpenAPI-backed API entities. |
+| **main** | Technical documentation | none | not populated | none | Gap. No `backstage.io/techdocs-ref` annotation is currently set. |
+| **main** | Download schema | BCDC resource details | no download endpoint is implemented | none | Gap. Schema is embedded in `spec.schema`; no downloadable schema link is created. |
+| **main** | Need help? | none | not populated | none | Gap. Contacts are used to create `User` entities, not support channel values. |
+| **About this Dataset** | description | `pkg.purpose` | fallback to `No description available` | `entity.spec.about.description` | Implemented. |
+| **Authoritative Designation** | authoritative for | none | hardcoded `GAP` | `entity.spec.authoritativeDesignation.authoritativeFor` | Gap. |
+| **Access Methods** | APIs | qualifying API resources | represented as API entity refs | `entity.spec.providesApis` | Implemented. |
+| **Access Methods** | other | `pkg.resources[]` | excludes resources where `bcdc_type === 'geographic'`; includes id, title, description, url, type, format, updateFrequency | `entity.spec.accessMethods[]` | Implemented. Geographic resources are intentionally filtered out. |
+| **Schema** | table name | `resource.object_name` or `resource.name` | only resources where `resource_type === 'data'` and `details[]` exists; de-duplicates by table key; sorted by `resource.position` | `entity.spec.schema.tables[].name` | Implemented. |
+| **Schema** | field name | `resource.details[].column_name` | direct | `entity.spec.schema.tables[].fields[].columnName` | Implemented. |
+| **Schema** | type | `resource.details[].data_type` | omitted if blank | `entity.spec.schema.tables[].fields[].dataType` | Implemented. |
+| **Schema** | precision | `resource.details[].data_precision` | converted to string when present | `entity.spec.schema.tables[].fields[].dataPrecision` | Implemented. |
+| **Schema** | short name | `resource.details[].short_name` | omitted if blank | `entity.spec.schema.tables[].fields[].shortName` | Implemented. |
+| **Schema** | description | `resource.details[].column_comments` | omitted if blank | `entity.spec.schema.tables[].fields[].columnComments` | Implemented. |
+| **Fields & definitions** | field name / definition / semantic domain / meaning of values / business rules / relationships / governance | none | not populated | `entity.spec.entityDefinitions` exists in the type but builder does not populate it | Gap. |
+| **Lineage and Quality** | Source System | none | hardcoded `GAP` | `entity.spec.lineage.sourceSystem` | Gap. |
+| **Lineage and Quality** | Transformation | `pkg.lineage_statement` | fallback to `No transformation information available` | `entity.spec.lineage.transformation` | Implemented. |
+| **Lineage and Quality** | Validation | none | hardcoded `GAP` | `entity.spec.quality.validation` | Gap. |
+| **Lineage and Quality** | Lineage refresh | none | hardcoded `GAP` | `entity.spec.lineage.refresh` | Gap. |
+| **Lineage and Quality** | Quality controls include | none | hardcoded `[GAP]` | `entity.spec.quality.controls[]` | Gap. |
+| **Versioning and Change Governance** | Current Version | none | hardcoded `GAP` | `entity.spec.versioning.currentVersion` | Gap. BCDC package version is retained as an annotation but not mapped here. |
+| **Versioning and Change Governance** | Initial Release | `pkg.record_publish_date` | direct | `entity.spec.versioning.initialRelease` | Implemented. |
+| **Versioning and Change Governance** | Last Updated | `pkg.record_last_modified` | direct | `entity.spec.versioning.lastUpdated` | Implemented. |
+| **Versioning and Change Governance** | description | none | hardcoded `GAP` | `entity.spec.versioning.description` | Gap. |
+| **Versioning and Change Governance** | Governance and Usage Constraints | none | not populated separately | none | Gap. Only `spec.governance.description` exists and is hardcoded `GAP`. |
+| **Support** | description | `pkg.organization.description` | direct | `entity.spec.support.description` | Implemented. |
+| **Support** | Dataset Ownership - Data Custodian | `pkg.organization.title` | direct | `entity.spec.support.dataCustodian` | Implemented. Canonical ownership is still `spec.owner`. |
+| **Support** | Dataset Ownership - Governance Authority | none | hardcoded `GAP` | `entity.spec.support.governanceAuthority` | Gap. |
+| **Support** | Support Pathways | none | hardcoded `GAP` | `entity.spec.support.pathways` | Gap. |
+| **Support** | Data and Semantics - description | none | hardcoded `GAP` | `entity.spec.support.dataAndSemantics.description` | Gap. |
+| **Support** | Data and Semantics - Channel | none | hardcoded `GAP` | `entity.spec.support.dataAndSemantics.channel` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Data and Semantics - Response time | none | hardcoded `GAP` | `entity.spec.support.dataAndSemantics.responseTime` | Gap. |
+| **Support** | Data and Semantics - Escalation | none | hardcoded `GAP` | `entity.spec.support.dataAndSemantics.escalation` | Gap. |
+| **Support** | Access and Integration - description | none | hardcoded `GAP` | `entity.spec.support.accessAndIntegration.description` | Gap. |
+| **Support** | Access and Integration - Channel | none | hardcoded `GAP` | `entity.spec.support.accessAndIntegration.channel` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Access and Integration - Response time | none | hardcoded `GAP` | `entity.spec.support.accessAndIntegration.responseTime` | Gap. |
+| **Support** | Access and Integration - Escalation | none | hardcoded `GAP` | `entity.spec.support.accessAndIntegration.escalation` | Gap. |
+| **Support** | Governance and Production Escalation - description | none | hardcoded `GAP` | `entity.spec.support.governanceAndProductionEscalation.description` | Gap. |
+| **Support** | Governance and Production Escalation - Channel | none | hardcoded `GAP` | `entity.spec.support.governanceAndProductionEscalation.channel` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Governance and Production Escalation - Reference dataset name + version + environment | none | hardcoded `GAP` | `entity.spec.support.governanceAndProductionEscalation.referenceDataset` | Gap. |
+| **Support** | Governance and Production Escalation - Response time | none | hardcoded `GAP` | `entity.spec.support.governanceAndProductionEscalation.responseTime` | Gap. |
+| **Related resources** | links | `pkg.more_info[]` and `pkg.resources[]` | excludes geographic resources; includes URL and title | `entity.spec.relatedResources[]` | Implemented. This duplicates some links also present in `metadata.links` / access methods. |
+| **Annotations** | package metadata | many `pkg.*` fields | stored as strings; missing optional values often become `Unknown` | `entity.metadata.annotations['bcdata.gov.bc.ca/package-*']` | Implemented. Useful for traceability but not necessarily rendered in UI. |
+| **Annotations** | managed by location | BCDC dataset URL | `url:${bcdcDatasetUrl}` | `backstage.io/managed-by-location`; `backstage.io/managed-by-origin-location` | Implemented. |
 
 ## BC Data Catalog → Backstage API UI Mapping
 
-### Detailed Mapping Table
+### Actual implemented mapping
 
-| UI section | UI property | BC Data Catalog source | Transformation / logic | Backstage mapping | Notes / gaps |
+The implementation creates built-in Backstage `API` entities for both OpenAPI-backed resources and generic BCDC webservice resources. OpenAPI-backed APIs carry additional UI-oriented data in `entity.metadata.customMetadata`.
+
+| UI section | UI property | BC Data Catalog / OpenAPI source | Transformation / logic | Backstage mapping | Notes / gaps |
 |---|---|---|---|---|---|
-|**main**|title|oad.info.title|direct|entity.metadata.title|—|
-|---|description|oad.info.description or summary|direct|entity.metadata.description|—|
-|---|tags|oad.*.tags[].name|direct|entity.metadata.tags|—|
-|---|Part of Connected Services|---|not available|custom|gap|
-|---|Learn more|oas.*.extenalDocs|direct|entity.metadata.links|—|
-|---|Provider Ministry|---|not available|custom|gap - We have an Organization but it does not corrispond directly to a Ministry |
-|---|Status|---|not available|custom|gap - we have an "active" status but it does not map to anything like "Beta"|
-|---|Security Classification|security_class|direct (mapping)|entity.spec.securityClassification|This is mirroring the Dataset security classification. No independant source for APIs|
-|---|Application|---|not available|custom|gap|
-|---|Type|---|not available|custom|gap - Not sure what types we are expecting here.  If it is API then that is redundant.|
-|---|SDX Required|oad.tags[].name == 'SDX'|direct|custom|—|
-|---|Environments|oad.servers[]|direct|custom|—|
-|---|Access Model|---|not available|custom|gap - Not user what we are tying to do here.  Looks like a hodgepoge of data.  If we want to provide additional details for each environment then we should have a section for each environment in the UI.  We can pull the security info from the OAD but this info will be the same for all environments.  We have no other datasource right now.|
-|**About this API**|description|---|not available|custom|We aleady have the top level description we do not have a source for another description.|
-|**Data Source**|This API uses|---|not available|custom|gap|
-|---|Type|---|not available|custom|gap - What is our source for this?  Maybe we can look for specific tags.  This would not guarantee us a unique "Type" though|
-|---|Authoritative for|---|not available|custom|gap|
-|---|update frequency|resource_update_cycle|direct|custom|—|
-|---|Province-wide coverage|---|not available|custom|gap|
-|---|Governance|---|not available|custom|gap|
-|---|View Dataset Record|parent dataset|direct|entity.relation|—|
-|**Access and Onboarding**|description|---|not available|custom|gap - this data is not well structured so it looks like just a freeform text property.  We dont have a source for this although we potientially have access to detailed scope information in the OAD.  Although ideally we would present that in the Swagger UI as that is where developers would be looking for this.|
-|---|Environments.<dev|test|prod>|oad.servers[].url|direct|custom|—|
-|---|Environments.description|oad.servers[].description|direct|custom|—|
-|**Technical Reference**|View OpenAPI description|---|not available|custom|gap - Is this a link to the raw OpenAPI Spec? Are we creating our own custom inteface for this or are we going to use the existing Backstage functionality?|
-|---|Base URLs|oad.servers[]|direct|custom|It would be nice if we had one section for environment information instead of sprinkling it around the interface|
-|---|Endpoint|oad.paths[].operations[]|direct|custom|Looks like we are trying to recreate the Swagger UI here again but with less functionality|
-|---|Authentication|oad.paths[].operations[]|direct|custom|—|
-|---|Example Request|oad.paths[].operations[]|direct|custom|—|
-|---|Example Response|oad.paths[].operations[]|direct|custom|—|
-|**Data and Semantics**|Data returned|---|not available|custom|There are potentially dozens of differnt endpoints in an API so the data returned could be dozens of different data structures.  This is all provided by the Swagger UI and would be duplicated here except without the meaningfull context|
-|---|Authoratative Data source|---|not available|custom|gap - Is this just a link to the Dataset like we do above with View Dataset Record?|
-|---|Field Definitions|---|not available|custom|gap - This looks like links to the Dataset Record again and a link to the Data Dictionany which we want to be part of the Dataset.  The Data Dictionary is not directly applicable to the API. The API has its own documentation for the data it exposes.|
-|**Versioning and Change Governance**|Current Version|oad.info.version|direct|custom|—|
-|---|Initial Release|resource.created|direct|custom|This just indicates when the resource was added to BCDC.|
-|---|Last Updated|resource.metadata_modified|direct|custom|This probably just indicates when BCDC was updated.|
-|---|description|---|not available|custom|gap|
-|---|Change Management|---|not available|custom|gap|
-|---|Governance and Usage Constraints|---|not available|custom|gap|
-|**Support**|API Ownership|---|not available|custom|gap|
-|---|Support Pathways|---|not available|custom|gap - This looks like boilerplate|
-|---|Access and SDX Onboarding - description|not available|custom|gap|
-|---|Access and SDX Onboarding - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Access and SDX Onboarding - Response Time|---|not available|custom|gap|
-|---|Access and SDX Onboarding - Escalation|---|not available|custom|gap|
-|---|Technical Support - description|not available|custom|gap|
-|---|Technical Support - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Technical Support - Response Time|---|not available|custom|gap|
-|---|Technical Support - Escalation|---|not available|custom|gap|
-|---|Data & Semantics Support - description|not available|custom|gap|
-|---|Data & Semantics Support - Contact|contacts[].email|direct|custom|We may be able to use the contacts[].role to identify the correct appropriate contact.  Looks like we may be limited to email addresses.  [businessExpert, custodian, dataManager, dataSteward, distributor, pointOfContact]|
-|---|Data & Semantics Support - Response Time|---|not available|custom|gap|
-|---|Data & Semantics Support - Escalation|---|not available|custom|gap|
-|---|Production Incident Escalation|---|not available|custom|gap|
-|**Related Resources**|oas.*.extenalDocs|direct|entity.metadata.links|This gives us the same content as More Info.  |
+| **main** | entity kind | implementation | built-in Backstage API | `apiVersion: backstage.io/v1alpha1`, `kind: API` | Implemented. The previous custom `OpenApi` kind is not used for created OpenAPI resources in this branch. |
+| **main** | title | OpenAPI `info.title` or `apiResource.name` | OpenAPI-backed APIs append `v{info.version}` and `OAS/Swagger {specificationVersion}` when available | `entity.metadata.title` | Implemented for OpenAPI-backed APIs. Generic API uses `apiResource.name` directly. |
+| **main** | description | OpenAPI `info.description` or `apiResource.description` | fallback to `No description available` | `entity.metadata.description`; OpenAPI also `entity.metadata.customMetadata.description` | Implemented. |
+| **main** | tags | OpenAPI `tags[].name` | normalized and de-duplicated | `entity.metadata.tags` | Implemented for OpenAPI-backed APIs. Generic API tags contain normalized `apiResource.format`. |
+| **main** | Part of Connected Services | none | hardcoded `GAP` | `entity.metadata.customMetadata.connectedServicesDescription` | Gap. OpenAPI-backed only. |
+| **main** | Learn more | OpenAPI `externalDocs` | de-duplicated links | `entity.metadata.links` | Implemented for OpenAPI-backed APIs. Generic API links include BCDC record and resource URL. |
+| **main** | Provider Ministry | none | hardcoded `GAP` | `entity.metadata.customMetadata.providerMinistry` | Gap. Organization ownership is represented by `spec.owner`, but ministry is not independently mapped. |
+| **main** | Owner | `pkg.organization.name` | organization group id | `entity.spec.owner` | Implemented. |
+| **main** | System | `pkg.organization.name` | organization system id | `entity.spec.system` | Implemented. |
+| **main** | Type | implementation / resource | OpenAPI-backed APIs use `openapi`; generic APIs use `apiResource.bcdc_type` | `entity.spec.type` | Implemented. |
+| **main** | Lifecycle / status | implementation | lifecycle hardcoded to `production`; UI status hardcoded to `GAP` for OpenAPI-backed APIs | `entity.spec.lifecycle`; `entity.metadata.customMetadata.status` | Backstage lifecycle implemented; design-level status remains gap. |
+| **main** | Security Classification | `pkg.security_class` | normalized to `Public`, `Protected A`, `Protected B`, `Protected C`, or `Unknown` | `entity.metadata.customMetadata.securityClassification` | Implemented for OpenAPI-backed APIs only. Generic API has package/resource annotations but no custom metadata field. |
+| **main** | Application | none | hardcoded `GAP` | `entity.metadata.customMetadata.application` | Gap. |
+| **main** | SDX Required | OpenAPI tags | `secure-data-exchange` tag → `Yes`; otherwise `No` | `entity.metadata.customMetadata.sdxRequired` | Implemented for OpenAPI-backed APIs. Uses exact normalized comparison against `secure-data-exchange`. |
+| **main** | Environments | OpenAPI 3 `servers[]`; Swagger 2 `schemes`, `host`, `basePath` | infers environment labels such as Dev/Test/Prod from URL or description | `entity.metadata.customMetadata.environments[]` | Implemented for OpenAPI-backed APIs. |
+| **main** | Access Model | none | hardcoded `GAP` | `entity.metadata.customMetadata.accessModel` | Gap. |
+| **URLs** | BCDC resource URL | generated from package/resource ids | `https://catalogue.data.gov.bc.ca/dataset/{pkg.name}/resource/{apiResource.id}` | `entity.metadata.customMetadata.urls.bcdcDatasetResourceUrl`; `metadata.links[]` for generic API | Implemented. |
+| **URLs** | OpenAPI spec URL | extracted from `apiResource.url` or nested `url` query parameter | direct | `entity.metadata.customMetadata.urls.openapiSpecUrl`; `entity.metadata.customMetadata.technicalReference.openApiSpecUrl` | Implemented for OpenAPI-backed APIs. |
+| **About this API** | Intended Use | none | hardcoded `GAP` | `entity.metadata.customMetadata.about.intendedUse` | Gap. |
+| **About this API** | Not Intended For | none | hardcoded `GAP` | `entity.metadata.customMetadata.about.notIntendedFor` | Gap. |
+| **Data Source** | This API uses | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataSource.apiUses` | Gap. |
+| **Data Source** | Type | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataSource.type` | Gap. |
+| **Data Source** | Authoritative for | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataSource.authoritativeFor` | Gap. |
+| **Data Source** | update frequency | `apiResource.resource_update_cycle` | direct, fallback blank string | `entity.metadata.customMetadata.dataSource.updateFrequency` | Implemented for OpenAPI-backed APIs. |
+| **Data Source** | Province-wide coverage | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataSource.provinceWideCoverage` | Gap. |
+| **Data Source** | Governance | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataSource.governance` | Gap. |
+| **Data Source** | View Dataset Record | parent dataset entity ref | generated by factory from package name | `entity.metadata.customMetadata.dataSource.dataset` | Implemented for OpenAPI-backed APIs. |
+| **Access and Onboarding** | description | none | hardcoded `GAP` | `entity.metadata.customMetadata.accessAndOnboarding.description` | Gap. |
+| **Access and Onboarding** | Environments | OpenAPI environments | maps name, url, description; fallback description `--` in this section | `entity.metadata.customMetadata.accessAndOnboarding.environments[]` | Implemented for OpenAPI-backed APIs. |
+| **Technical Reference** | View OpenAPI description | `apiResource.url` / extracted definition URL | direct | `entity.metadata.customMetadata.technicalReference.openApiSpecUrl` | Implemented for OpenAPI-backed APIs. |
+| **Technical Reference** | Base URLs | OpenAPI environments | maps label/url into base URL entries | `entity.metadata.customMetadata.technicalReference.baseUrls[]` | Implemented for OpenAPI-backed APIs. |
+| **Technical Reference** | Endpoint | OpenAPI `paths` operations | extracts path, method, summary, description | `entity.metadata.customMetadata.technicalReference.endpoints[]` | Implemented for OpenAPI-backed APIs. |
+| **Technical Reference** | Authentication | OpenAPI security schemes / operation security | summarizes OAuth2, OIDC, mTLS, API key, HTTP auth, etc. | `entity.metadata.customMetadata.technicalReference.authentication`; endpoint-level `authentication` | Implemented for OpenAPI-backed APIs. |
+| **Technical Reference** | Example Request | OpenAPI request body / parameter examples | JSON stringifies non-string examples | `entity.metadata.customMetadata.technicalReference.endpoints[].exampleRequest` | Implemented when examples are present in the OpenAPI document. |
+| **Technical Reference** | Example Response | OpenAPI response examples / schema examples | JSON stringifies non-string examples | `entity.metadata.customMetadata.technicalReference.endpoints[].exampleResponse` | Implemented when examples are present in the OpenAPI document. |
+| **Data and Semantics** | Data returned | OpenAPI schemas | only object schemas are included; extracts field name, type, format, required, description | `entity.metadata.customMetadata.dataAndSemantics.dataReturned[]` | Implemented for OpenAPI-backed APIs. |
+| **Data and Semantics** | Data returned note | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataAndSemantics.dataReturnedNote` | Gap. |
+| **Data and Semantics** | Authoritative Data source | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataAndSemantics.authoritativeDataSource` | Gap. |
+| **Data and Semantics** | Field Definitions | none | hardcoded `GAP` | `entity.metadata.customMetadata.dataAndSemantics.fieldDefinitions` | Gap. OpenAPI schema field descriptions may partially cover this, but the mapped design field remains a gap. |
+| **Versioning and Change Governance** | Current Version | OpenAPI `info.version` | direct, fallback blank string | `entity.metadata.customMetadata.versioningAndChangeGovernance.currentVersion` | Implemented for OpenAPI-backed APIs. |
+| **Versioning and Change Governance** | Initial Release | `apiResource.created` | direct, fallback blank string | `entity.metadata.customMetadata.versioningAndChangeGovernance.initialRelease` | Implemented, but this is BCDC resource creation date, not necessarily API release date. |
+| **Versioning and Change Governance** | Last Updated | `apiResource.metadata_modified` | direct, fallback blank string | `entity.metadata.customMetadata.versioningAndChangeGovernance.lastUpdated` | Implemented, but this is BCDC resource metadata date, not necessarily API change date. |
+| **Versioning and Change Governance** | description | none | hardcoded `GAP` | `entity.metadata.customMetadata.versioningAndChangeGovernance.description` | Gap. |
+| **Versioning and Change Governance** | Change Management | none | one placeholder object with GAP fields | `entity.metadata.customMetadata.versioningAndChangeGovernance.changeManagement[]` | Gap. |
+| **Versioning and Change Governance** | Change Management Notes | none | hardcoded `GAP` | `entity.metadata.customMetadata.versioningAndChangeGovernance.changeManagementNotes` | Gap. |
+| **Versioning and Change Governance** | Governance and Usage Constraints | none | hardcoded `GAP` | `entity.metadata.customMetadata.versioningAndChangeGovernance.governanceAndUsageConstraints` | Gap. |
+| **Support** | API Ownership | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.apiOwnership` | Gap. |
+| **Support** | Support Pathways | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.supportPathways` | Gap. |
+| **Support** | Access and SDX Onboarding - description/contact/response/escalation | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.accessAndSdxOnboarding.*` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Technical Support - description/contact/response/escalation | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.technicalSupport.*` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Data & Semantics Support - description/contact/response/escalation | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.dataAndSemanticsSupport.*` | Gap. Contacts are not currently selected by role for this value. |
+| **Support** | Production Incident Escalation | none | hardcoded `GAP` | `entity.metadata.customMetadata.support.productionIncidentEscalation` | Gap. |
+| **Related Resources** | OpenAPI external docs | OpenAPI `externalDocs` | reuses metadata links as `{ url, title }` | `entity.metadata.customMetadata.relatedResources[]` | Implemented for OpenAPI-backed APIs. |
+| **Definition** | API definition | fetched OpenAPI content, or generic resource definition URL | OpenAPI resources store fetched definition content; generic APIs store URL/definition string | `entity.spec.definition` | Implemented. |
+| **Annotations** | resource metadata | many `apiResource.*` fields | stored as strings, missing optional values often become `Undefined` | `entity.metadata.annotations['bcdata.gov.bc.ca/resource-*']` | Implemented for both OpenAPI-backed and generic API entities. |
+| **Annotations** | managed by location | BCDC dataset resource URL | `url:${bcdcDatasetResourceUrl}` | `backstage.io/managed-by-location`; `backstage.io/managed-by-origin-location` | Implemented. |
 
+### Generic BCDC webservice API mapping
 
-```json
-{
-    "help": "https://catalogue.data.gov.bc.ca/api/3/action/help_show?name=package_show",
-    "success": true,
-    "result": {
-        "author": "a79cf565-4b26-4ae7-94cb-f274ab562ef2",
-        "author_email": null,
-        "creator_user_id": "a79cf565-4b26-4ae7-94cb-f274ab562ef2",
-        "download_audience": "Public",
-        "id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-        "isopen": false,
-        "license_id": "25",
-        "license_title": "King's Printer Licence - British Columbia",
-        "license_url": "https://www.bclaws.gov.bc.ca/standards/Licence.html",
-        "maintainer": null,
-        "maintainer_email": null,
-        "metadata_created": "2015-02-18T21:40:07.828528",
-        "metadata_modified": "2024-02-15T23:38:00.603956",
-        "metadata_visibility": "Public",
-        "name": "bc-laws-api",
-        "notes": "BC Laws is an electronic library providing free public access to the laws of British Columbia. BC Laws is hosted by the Queen’s Printer of British Columbia and published in partnership with the Ministry of Justice and the Law Clerk of the Legislative Assembly.\n\nBC Laws contains a comprehensive collection of BC legislation and related materials. It is available on the internet in two forms:\nFirst: The library is available as a web site in which users can browse and search the laws of British Columbia.\nSecond: The library is available as a portal to legislation in raw XML data format, accessible via the BC Laws API.\n\n This direct access to raw data is intended to enable third parties to build or add their own custom applications based on the structure of the data and all the associated search functionality inherent in that structure. The BC Laws website itself is an example of one such application of the BC Laws API.\n\nThe BC Laws API is available according to the [Queen's Printer License – British Columbia] (https://www.bclaws.gov.bc.ca/standards/QP-License.html).",
-        "num_resources": 4,
-        "num_tags": 4,
-        "organization": {
-            "id": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
-            "name": "king-s-printer",
-            "title": "King's Printer",
-            "type": "organization",
-            "description": "",
-            "image_url": "",
-            "created": "2015-02-18T13:36:56.424917",
-            "is_organization": true,
-            "approval_status": "approved",
-            "state": "active"
-        },
-        "owner_org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
-        "private": false,
-        "publish_state": "PUBLISHED",
-        "record_create_date": "2015-02-18",
-        "record_last_modified": "2024-02-15",
-        "record_publish_date": "2015-02-19",
-        "resource_status": "onGoing",
-        "security_class": "PUBLIC",
-        "state": "active",
-        "title": "BC Laws API",
-        "type": "bcdc_dataset",
-        "url": "https://raw.githubusercontent.com/BCDevExchange/API-Management/master/swagger-json/bclaws.json",
-        "version": null,
-        "view_audience": "Public",
-        "contacts": [
-            {
-                "displayed": [
-                    "displayed"
-                ],
-                "email": "niel.li@gov.bc.ca",
-                "name": "Niel Li",
-                "org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
-                "role": "businessExpert"
-            },
-            {
-                "displayed": [],
-                "email": "priyanka.alexander@gov.bc.ca",
-                "name": "Priyanka Alexander",
-                "org": "e0abc95e-b3f1-4c84-abc5-cddd817e0ea1",
-                "role": "businessExpert"
-            }
-        ],
-        "dates": [
-            {
-                "date": "2015-02-18",
-                "type": "Created"
-            }
-        ],
-        "groups": [
-            {
-                "description": "An API Registry for BC Government, [click here for BC Government API Guidelines](https://developer.gov.bc.ca/Data-and-APIs/BC-Government-API-Guidelines)",
-                "display_name": "BC Government API Registry",
-                "id": "65c44d61-ff6e-418f-b1aa-6023c3f7ed4c",
-                "image_display_url": "https://catalogue.data.gov.bc.ca/uploads/group/2018-02-21-215929.13946617069795.png",
-                "name": "bc-government-api-registry",
-                "title": "BC Government API Registry"
-            }
-        ],
-        "more_info": [
-            {
-                "description": "",
-                "url": "http://www.bclaws.ca/civix/template/complete/api/index.html"
-            }
-        ],
-        "resources": [
-            {
-                "bcdc_type": "webservice",
-                "cache_last_updated": null,
-                "cache_url": null,
-                "created": "2015-02-18T13:40:58.220000",
-                "datastore_active": false,
-                "description": "",
-                "details": [],
-                "format": "html",
-                "geographic_extent": [],
-                "hash": "",
-                "id": "361a7459-8f6f-4b02-bea8-bbe9ed764176",
-                "iso_topic_category": [],
-                "json_table_schema": {},
-                "metadata_modified": "2015-02-18T13:40:58.220000",
-                "mimetype": null,
-                "mimetype_inner": null,
-                "name": "API Application Programming Interface",
-                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-                "position": 0,
-                "preview_info": [],
-                "projection_name": "na",
-                "resource_access_method": "service",
-                "resource_storage_location": "na",
-                "resource_type": "data",
-                "resource_update_cycle": "asNeeded",
-                "size": null,
-                "spatial_datatype": "",
-                "state": "active",
-                "url": "http://www.bclaws.ca/civix/template/complete/api/index.html",
-                "url_type": null,
-                "temporal_extent": [
-                    {
-                        "beginning_date": "",
-                        "end_date": ""
-                    }
-                ]
-            },
-            {
-                "bcdc_type": "webservice",
-                "cache_last_updated": null,
-                "cache_url": null,
-                "created": "2016-03-11T10:22:44.026000",
-                "datastore_active": false,
-                "description": "",
-                "details": [],
-                "format": "openapi-json",
-                "geographic_extent": [],
-                "hash": "",
-                "id": "6505a462-75de-44df-8db9-60a63cf7ab2f",
-                "iso_topic_category": [],
-                "json_table_schema": {},
-                "metadata_modified": "2016-03-11T10:22:44.026000",
-                "mimetype": null,
-                "mimetype_inner": null,
-                "name": "API Console",
-                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-                "position": 1,
-                "preview_info": [],
-                "projection_name": "na",
-                "resource_access_method": "service",
-                "resource_storage_location": "na",
-                "resource_type": "data",
-                "resource_update_cycle": "asNeeded",
-                "size": 0,
-                "spatial_datatype": "",
-                "state": "active",
-                "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
-                "url_type": "",
-                "temporal_extent": [
-                    {
-                        "beginning_date": "",
-                        "end_date": ""
-                    }
-                ]
-            },
-            {
-                "bcdc_type": "webservice",
-                "cache_last_updated": null,
-                "cache_url": null,
-                "created": "2015-12-18T17:44:48.147000",
-                "datastore_active": false,
-                "description": "",
-                "details": [],
-                "format": "json",
-                "geographic_extent": [],
-                "hash": "",
-                "id": "3664d2d3-6dcb-4307-9652-a28332981ca3",
-                "iso_topic_category": [],
-                "json_table_schema": {},
-                "metadata_modified": "2015-12-18T17:44:48.147000",
-                "mimetype": null,
-                "mimetype_inner": null,
-                "name": "API Specs",
-                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-                "position": 2,
-                "preview_info": [],
-                "projection_name": "na",
-                "resource_access_method": "service",
-                "resource_storage_location": "na",
-                "resource_type": "data",
-                "resource_update_cycle": "asNeeded",
-                "size": null,
-                "spatial_datatype": "",
-                "state": "active",
-                "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
-                "url_type": "",
-                "temporal_extent": [
-                    {
-                        "beginning_date": "",
-                        "end_date": ""
-                    }
-                ]
-            },
-            {
-                "bcdc_type": "webservice",
-                "cache_last_updated": null,
-                "cache_url": null,
-                "created": "2015-12-17T16:48:45.099000",
-                "datastore_active": false,
-                "description": "",
-                "details": [],
-                "format": "html",
-                "geographic_extent": [],
-                "hash": "",
-                "id": "fbadcf16-a7cf-4128-b7d1-65b5d5b5aa79",
-                "iso_topic_category": [],
-                "json_table_schema": {},
-                "metadata_modified": "2015-12-17T16:48:45.099000",
-                "mimetype": null,
-                "mimetype_inner": null,
-                "name": "API Spec Editor",
-                "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-                "position": 3,
-                "preview_info": [],
-                "projection_name": "na",
-                "resource_access_method": "service",
-                "resource_storage_location": "na",
-                "resource_type": "data",
-                "resource_update_cycle": "asNeeded",
-                "size": 0,
-                "spatial_datatype": "",
-                "state": "active",
-                "url": "https://oas-editor.apps.gov.bc.ca/?url=https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
-                "url_type": "",
-                "temporal_extent": [
-                    {
-                        "beginning_date": "",
-                        "end_date": ""
-                    }
-                ]
-            }
-        ],
-        "tags": [
-            {
-                "display_name": "API",
-                "id": "4bd16f13-e4af-48ab-9676-255d04600fd4",
-                "name": "API",
-                "state": "active",
-                "vocabulary_id": null
-            },
-            {
-                "display_name": "BCDevExchange",
-                "id": "68c0b5f9-51e8-40d9-9988-87e17b672c48",
-                "name": "BCDevExchange",
-                "state": "active",
-                "vocabulary_id": null
-            },
-            {
-                "display_name": "LAWS",
-                "id": "b9260b3e-1cc0-4a42-ba37-08d7e59cfabb",
-                "name": "LAWS",
-                "state": "active",
-                "vocabulary_id": null
-            },
-            {
-                "display_name": "OpenAPI spec",
-                "id": "5c1e7cd0-d772-4430-8efd-63bb6954f803",
-                "name": "OpenAPI spec",
-                "state": "active",
-                "vocabulary_id": null
-            }
-        ],
-        "relationships_as_subject": [],
-        "relationships_as_object": []
-    }
-}
-```
+Generic webservice resources that are not parsed as OpenAPI are much thinner than OpenAPI-backed APIs.
 
-```json
-{
-      "bcdc_type": "webservice",
-      "cache_last_updated": null,
-      "cache_url": null,
-      "created": "2016-03-11T10:22:44.026000",
-      "datastore_active": false,
-      "description": "",
-      "details": [],
-      "format": "openapi-json",
-      "geographic_extent": [],
-      "hash": "",
-      "id": "6505a462-75de-44df-8db9-60a63cf7ab2f",
-      "iso_topic_category": [],
-      "json_table_schema": {},
-      "metadata_modified": "2016-03-11T10:22:44.026000",
-      "mimetype": null,
-      "mimetype_inner": null,
-      "name": "API Console",
-      "package_id": "6e815cf7-cb83-4655-9ad4-a926ae4e59f7",
-      "position": 1,
-      "preview_info": [],
-      "projection_name": "na",
-      "resource_access_method": "service",
-      "resource_storage_location": "na",
-      "resource_type": "data",
-      "resource_update_cycle": "asNeeded",
-      "size": 0,
-      "spatial_datatype": "",
-      "state": "active",
-      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/bclaws/bclaws.json",
-      "url_type": "",
-      "temporal_extent": [
-         {
-            "beginning_date": "",
-            "end_date": ""
-         }
-      ]
-}
-```
+| Entity field | Source | Transformation / logic | Notes / gaps |
+|---|---|---|---|
+| `apiVersion` | implementation | `backstage.io/v1alpha1` | Built-in Backstage API. |
+| `kind` | implementation | `API` | Built-in Backstage API. |
+| `spec.type` | `apiResource.bcdc_type` | fallback option also accepts explicit `apiType` | Usually `webservice`. |
+| `spec.lifecycle` | implementation | `production` | Hardcoded. |
+| `spec.owner` | organization group id | from package organization | Implemented. |
+| `spec.system` | organization system id | from package organization | Implemented. |
+| `spec.definition` | extracted definition URL | direct | Not parsed; no endpoint/schema/security extraction. |
+| `metadata.title` | `apiResource.name` | direct | Implemented. |
+| `metadata.description` | `apiResource.description` | fallback to `No description available` | Implemented. |
+| `metadata.tags` | `apiResource.format` | normalized through naming utility | Implemented. |
+| `metadata.links` | generated BCDC resource URL and `apiResource.url` | two links: BCDC record and resource URL | Implemented. |
+| `metadata.annotations` | `apiResource.*` | resource metadata annotations | Implemented. |
+| `metadata.customMetadata` | none | not populated | Most API UI mapping fields are unavailable for generic APIs. |
 
-```json
-{
-      "bcdc_type": "webservice",
-      "cache_last_updated": null,
-      "cache_url": null,
-      "created": "2026-02-04T00:10:02.783733",
-      "datastore_active": false,
-      "format": "openapi-json",
-      "hash": "",
-      "id": "9289ded0-fbcf-4cb4-ada7-aee5883206e5",
-      "isUrl": "true",
-      "iso_topic_category": [],
-      "json_table_schema": {},
-      "metadata_modified": "2026-02-04T00:10:02.774965",
-      "mimetype": null,
-      "mimetype_inner": null,
-      "name": "Directory API spec",
-      "package_id": "84aa4145-e8d9-4596-b4ee-9b568209f180",
-      "position": 2,
-      "projection_name": "na",
-      "resource_access_method": "service",
-      "resource_storage_location": "web or ftp site",
-      "resource_type": "data",
-      "resource_update_cycle": "asNeeded",
-      "size": null,
-      "spatial_datatype": "",
-      "state": "active",
-      "url": "https://api.gov.bc.ca/ds/api/v3/openapi.yaml",
-      "url_type": null
-}
-```
+## Remaining notable gaps
 
-```json
-{
-      "bcdc_type": "webservice",
-      "cache_last_updated": null,
-      "cache_url": "null",
-      "created": "2016-03-11T10:09:28.901000",
-      "datastore_active": "false",
-      "description": "",
-      "details": [],
-      "format": "openapi-json",
-      "geographic_extent": [],
-      "hash": "",
-      "id": "40d6411e-ab98-4df9-a24e-67f81c45f6fa",
-      "iso_topic_category": [],
-      "json_table_schema": {},
-      "metadata_modified": "2016-03-11T10:09:28.901000",
-      "mimetype": "null",
-      "mimetype_inner": "null",
-      "name": "API Specification",
-      "package_id": "8f4a016f-14db-4def-8ef9-7c797de1cdd9",
-      "position": 0,
-      "preview_info": [],
-      "projection_name": "epsg4326",
-      "resource_access_method": "service",
-      "resource_storage_location": "na",
-      "resource_type": "data",
-      "resource_update_cycle": "asNeeded",
-      "size": 0,
-      "spatial_datatype": "",
-      "state": "active",
-      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/geocoder/geocoder-combined.json",
-      "url_type": "",
-      "temporal_extent": [
-         {
-            "__extras": {
-                  "[object Object]": ""
-            },
-            "beginning_date": "",
-            "end_date": ""
-         }
-      ]
-}
-```
-
-```json
-{
-      "bcdc_type": "webservice",
-      "cache_last_updated": null,
-      "cache_url": null,
-      "created": "2018-02-21T22:18:49.675000",
-      "datastore_active": false,
-      "description": "",
-      "details": [],
-      "format": "openapi-json",
-      "geographic_extent": [],
-      "hash": "",
-      "id": "3692fd5e-87e2-47ab-8eee-9131ea249436",
-      "iso_topic_category": [],
-      "metadata_modified": "2018-02-21T22:18:49.675000",
-      "mimetype": null,
-      "mimetype_inner": null,
-      "name": "API Console - OAS3",
-      "package_id": "f44a884d-8fed-4b6a-99e7-19e8a01691ec",
-      "position": 0,
-      "preview_info": [],
-      "projection_name": "na",
-      "resource_access_method": "service",
-      "resource_storage_location": "na",
-      "resource_type": "data",
-      "resource_update_cycle": "asNeeded",
-      "size": 0,
-      "spatial_datatype": "",
-      "state": "active",
-      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/news/news-oas3.yaml",
-      "url_type": "",
-      "temporal_extent": [
-         {
-            "beginning_date": "",
-            "end_date": ""
-         }
-      ]
-}
-```
-
-```json
-{
-      "bcdc_type": "webservice",
-      "cache_last_updated": null,
-      "cache_url": "null",
-      "created": "2016-03-17T12:04:28.837000",
-      "datastore_active": "false",
-      "description": "",
-      "format": "openapi-json",
-      "hash": "",
-      "id": "82cd3194-0955-4d7e-b35a-78a98fda153a",
-      "iso_topic_category": [],
-      "json_table_schema": {},
-      "metadata_modified": "2025-01-17T17:44:59.241069",
-      "mimetype": "null",
-      "mimetype_inner": "null",
-      "name": "API Specification",
-      "package_id": "3dad0c30-ef32-4f4c-82fa-33787d5f85f8",
-      "position": 0,
-      "projection_name": "epsg4326",
-      "resource_access_method": "service",
-      "resource_storage_location": "na",
-      "resource_type": "data",
-      "resource_update_cycle": "asNeeded",
-      "size": null,
-      "spatial_datatype": "",
-      "state": "active",
-      "supplemental_info": "",
-      "url": "https://raw.githubusercontent.com/bcgov/api-specs/master/router/router.json",
-      "url_type": ""
-}
-```
+| Area | Gap |
+|---|---|
+| Dataset support contacts | BCDC contacts create `User` entities but do not populate Dataset support channel fields because there is no determaniztic mapping. |
+| API support contacts | BCDC contacts do not populate OpenAPI support contact fields because there is no determaniztic mapping. |
+| Dataset quality/governance/retention | Most fields are placeholders with `GAP`. |
+| API governance/change management/support | Most fields are placeholders with `GAP`. |
+| TechDocs | Dataset/API entities do not currently set TechDocs annotations. |
+| Downloadable schema | Dataset schema is embedded in the entity; no download endpoint/link is implemented. |
+| Generic APIs | Generic webservice resources are represented as built-in API entities but do not get OpenAPI-derived custom metadata. |

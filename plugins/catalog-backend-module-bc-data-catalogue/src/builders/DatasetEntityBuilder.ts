@@ -4,18 +4,17 @@ import {
   DATASET_KIND,
   type DatasetAccessMethod,
   type DatasetEntity,
+  type DatasetSchema,
   type DatasetSecurityClassification,
   type DatasetStatus,
 } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import type { BcDataCataloguePackage } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
-import { BcDataCatalogueSchemaUtils } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 import { BcDataCatalogueNaming } from '../BcDataCatalogueNaming';
 
 const GAP = 'GAP';
 
 type DatasetEntityBuilderOptions = {
   naming: BcDataCatalogueNaming;
-  schemaUtils: BcDataCatalogueSchemaUtils;
 };
 
 type BuildDatasetEntityOptions = {
@@ -24,25 +23,33 @@ type BuildDatasetEntityOptions = {
   ownerGroupId: string;
   systemId: string;
   providesApis: string[];
+  accessMethods: DatasetAccessMethod[];
+  relatedResources: NonNullable<DatasetEntity['spec']['relatedResources']>;
+  schema?: DatasetSchema;
   bcdcDatasetUrl: string;
 };
 
 export class DatasetEntityBuilder {
   private readonly naming: BcDataCatalogueNaming;
-  private readonly schemaUtils: BcDataCatalogueSchemaUtils;
 
   constructor(options: DatasetEntityBuilderOptions) {
     this.naming = options.naming;
-    this.schemaUtils = options.schemaUtils;
   }
 
   build(options: BuildDatasetEntityOptions): DatasetEntity {
-    const { pkg, safeName, ownerGroupId, systemId, providesApis, bcdcDatasetUrl } = options;
+    const {
+      pkg,
+      safeName,
+      ownerGroupId,
+      systemId,
+      providesApis,
+      accessMethods,
+      relatedResources,
+      schema,
+      bcdcDatasetUrl,
+    } = options;
 
     const learnMoreLinks = this.buildLearnMoreLinks(pkg, bcdcDatasetUrl);
-    const relatedResources = this.buildRelatedResources(pkg);
-    const accessMethods = this.buildAccessMethods(pkg);
-    const schema = this.schemaUtils.buildDatasetSchema(pkg.resources);
     const normalizedTags = this.buildTags(pkg, schema?.tables?.length ?? 0);
     const managedByLocation = `url:${bcdcDatasetUrl}`;
 
@@ -53,7 +60,6 @@ export class DatasetEntityBuilder {
         owner: ownerGroupId,
         system: systemId,
         type: GAP + '<type>',
-
         description: pkg.notes || 'No description available',
         status: this.normalizeStatus(pkg.publish_state),
         securityClassification: this.normalizeSecurityClassification(
@@ -110,9 +116,9 @@ export class DatasetEntityBuilder {
           },
           governanceAndProductionEscalation: {
             description:
-              GAP +
-              '<support.governanceAndProductionEscalation.description>',
-            channel: GAP + '<support.governanceAndProductionEscalation.channel>',
+              GAP + '<support.governanceAndProductionEscalation.description>',
+            channel:
+              GAP + '<support.governanceAndProductionEscalation.channel>',
             referenceDataset:
               GAP +
               '<support.governanceAndProductionEscalation.referenceDataset>',
@@ -130,7 +136,7 @@ export class DatasetEntityBuilder {
         annotations: {
           'backstage.io/managed-by-location': managedByLocation,
           'backstage.io/managed-by-origin-location': managedByLocation,
-
+          'backstage.io/view-url': bcdcDatasetUrl,
           'bcdata.gov.bc.ca/package-author': pkg.author || 'Unknown',
           'bcdata.gov.bc.ca/package-author_email':
             pkg.author_email || 'Unknown',
@@ -175,7 +181,10 @@ export class DatasetEntityBuilder {
     };
   }
 
-  private buildLearnMoreLinks(pkg: BcDataCataloguePackage, bcdcDatasetUrl: string): EntityLink[] {
+  private buildLearnMoreLinks(
+    pkg: BcDataCataloguePackage,
+    bcdcDatasetUrl: string,
+  ): EntityLink[] {
     const learnMoreLinks: EntityLink[] = [
       {
         url: bcdcDatasetUrl,
@@ -199,66 +208,7 @@ export class DatasetEntityBuilder {
     return learnMoreLinks;
   }
 
-  private buildRelatedResources(
-    pkg: BcDataCataloguePackage,
-  ): Array<{ url: string; title?: string }> {
-    const relatedResources: Array<{ url: string; title?: string }> = [];
-
-    pkg.more_info?.forEach(moreInfo => {
-      if (moreInfo.url.length > 0) {
-        relatedResources.push({
-          url: moreInfo.url,
-          title: moreInfo.description || moreInfo.url,
-        });
-      }
-    });
-
-    pkg.resources?.forEach(resource => {
-      if (resource.bcdc_type === 'geographic') {
-        return;
-      }
-
-      if (resource.url.length > 0) {
-        relatedResources.push({
-          url: resource.url,
-          title: resource.name,
-        });
-      }
-    });
-
-    return relatedResources;
-  }
-
-  private buildAccessMethods(
-    pkg: BcDataCataloguePackage,
-  ): DatasetAccessMethod[] {
-    const accessMethods: DatasetAccessMethod[] = [];
-
-    pkg.resources?.forEach(resource => {
-      if (resource.bcdc_type === 'geographic') {
-        return;
-      }
-
-      if (resource.url.length > 0) {
-        accessMethods.push({
-          id: resource.id,
-          title: resource.name,
-          description: resource.description,
-          url: resource.url,
-          type: resource.bcdc_type,
-          format: resource.format,
-          updateFrequency: resource.resource_update_cycle,
-        });
-      }
-    });
-
-    return accessMethods;
-  }
-
-  private buildTags(
-    pkg: BcDataCataloguePackage,
-    tableCount: number,
-  ): string[] {
+  private buildTags(pkg: BcDataCataloguePackage, tableCount: number): string[] {
     const normalizedTags: string[] = [];
 
     pkg.tags?.forEach(tag => {
@@ -267,16 +217,6 @@ export class DatasetEntityBuilder {
 
     if (tableCount > 0) {
       normalizedTags.push('has-schema');
-    } else {
-      normalizedTags.push('has-no-schema');
-    }
-
-    if (tableCount >= 2 && tableCount <= 5) {
-      normalizedTags.push('has-two-to-five-tables');
-    } else if (tableCount >= 6 && tableCount <= 10) {
-      normalizedTags.push('has-six-to-10-tables');
-    } else if (tableCount >= 11) {
-      normalizedTags.push('has-11-or-more-tables');
     }
 
     return normalizedTags;

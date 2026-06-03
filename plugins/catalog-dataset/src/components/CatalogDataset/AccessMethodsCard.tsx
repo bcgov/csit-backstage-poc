@@ -1,9 +1,9 @@
 import {
   Card,
-  CardHeader,
   CardContent,
+  CardHeader,
+  Link,
   Typography,
-  Link
 } from '@material-ui/core';
 import { EntityRefLink } from '@backstage/plugin-catalog-react';
 
@@ -14,6 +14,7 @@ type AccessMethod = {
   type?: string;
   format?: string;
   description?: string;
+  entityRef?: string;
 };
 
 type Props = {
@@ -29,35 +30,20 @@ export const AccessMethodsCard = ({
   const hasOther = !!accessMethods?.length;
 
   return (
-    <Card
-      style={{
-        borderRadius: 8,
-        marginBottom: 16,
-        border: '2px solid rgba(0,0,0,0.23)',
-      }}
-      variant="outlined"
-    >
+    <Card>
       <CardHeader title="Access Methods" />
       <CardContent>
         {!hasApis && !hasOther ? (
-          <Typography variant="body2">
-            No access methods defined.
-          </Typography>
+          <Typography variant="body2">No access methods defined.</Typography>
         ) : (
           <>
             {hasApis && (
               <>
-                <Typography
-                  variant="subtitle1"
-                  style={{ marginBottom: 8, fontWeight: 600 }}
-                >
-                  APIs
-                </Typography>
-
-                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                <Typography variant="h6">APIs</Typography>
+                <ul>
                   {apiEntityRefs!.map(apiRef => (
                     <li key={apiRef}>
-                      <EntityRefLink entityRef={apiRef} />
+                      <EntityRefLink entityRef={apiRef} defaultKind="API" />
                     </li>
                   ))}
                 </ul>
@@ -66,38 +52,49 @@ export const AccessMethodsCard = ({
 
             {hasOther && (
               <>
-                <Typography
-                  variant="subtitle1"
-                  style={{ marginTop: hasApis ? 16 : 0, marginBottom: 8, fontWeight: 600 }}
-                >
-                  Other
-                </Typography>
-
-                <ul style={{ margin: 0, paddingLeft: 20 }}>
-                  {accessMethods!.map(m => (
-                    <li key={m.id} style={{ marginBottom: 8 }}>
-                    <Typography variant="body2">
-                        <Link
-                        href={m.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >
-                        {m.title}
-                        </Link>
-                        {(m.type || m.format) && (
+                <Typography variant="h6">Other</Typography>
+                <ul>
+                  {accessMethods!.map(method => (
+                    <li key={method.id}>
+                      {method.entityRef ? (
                         <>
-                            {' '}
-                            ({m.type}
-                            {m.format ? ` • ${m.format}` : ''})
+                          <EntityRefLink
+                            entityRef={method.entityRef}
+                            defaultKind="Resource"
+                            title={method.title}
+                          />
+                          {' '}
+                          <Link
+                            href={method.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Open
+                          </Link>
                         </>
-                        )}
-                    </Typography>
+                      ) : (
+                        <Link
+                          href={method.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {method.title}
+                        </Link>
+                      )}
 
-                    {m.description && (
-                        <Typography variant="body2" color="textSecondary" style={{ whiteSpace: 'pre-line' }}>
-                        {m.description}
+                      {(method.type || method.format) && (
+                        <>
+                          {' '}
+                          ({method.type}
+                          {method.format ? ` • ${method.format}` : ''})
+                        </>
+                      )}
+
+                      {method.description && (
+                        <Typography variant="body2">
+                          {method.description}
                         </Typography>
-                    )}
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -1,25 +1,14 @@
-import {
-  Card,
-  CardContent,
-  Typography,
-  Link,
-} from '@material-ui/core';
-import type { Entity } from '@backstage/catalog-model';
+import { Card, CardContent, Typography, Link } from '@material-ui/core';
 import { MarkdownContent } from '@backstage/core-components';
-
-type OpenApiSpec = {
-  connectedServicesDescription?: string;
-};
+import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
-  entity: Entity;
-  spec: OpenApiSpec;
+  entity: OpenApiEntity;
 };
 
-export const PartOfConnectedServices = ({
-  entity,
-  spec,
-}: Props) => {
+export const PartOfConnectedServices = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
   return (
     <Card
       style={{
@@ -33,13 +22,13 @@ export const PartOfConnectedServices = ({
             Part of Connected Services
           </Typography>
 
-          <MarkdownContent content={spec.connectedServicesDescription ?? '—'} />
+          <MarkdownContent
+            content={bcdc?.connectedServicesDescription ?? '—'}
+          />
         </div>
 
         <div style={{ marginTop: 12 }}>
-          <Typography variant="body2">
-            Learn more:
-          </Typography>
+          <Typography variant="body2">Learn more:</Typography>
 
           {entity.metadata.links?.length ? (
             <ul style={{ marginTop: 4, paddingLeft: 20 }}>

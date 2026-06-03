@@ -1,1 +1,1 @@
-export { CatalogDatasetPage } from './CatalogDatasetPage';
+export { EntityDatasetOverviewContent } from './EntityDatasetOverviewContent';

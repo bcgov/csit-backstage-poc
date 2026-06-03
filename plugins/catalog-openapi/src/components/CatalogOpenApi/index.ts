@@ -1,1 +1,3 @@
-export { CatalogOpenApiPage } from './CatalogOpenApiPage';
+export {
+  CatalogOpenApiDetailsContent,
+} from './CatalogOpenApiPage';

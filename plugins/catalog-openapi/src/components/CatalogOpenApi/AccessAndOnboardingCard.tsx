@@ -3,7 +3,7 @@ import { MarkdownContent } from '@backstage/core-components';
 import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 type EnvironmentBoxProps = {
@@ -56,8 +56,10 @@ const EnvironmentBox = ({
   );
 };
 
-export const AccessAndOnboardingCard = ({ spec }: Props) => {
-  const accessAndOnboarding = spec.accessAndOnboarding;
+export const AccessAndOnboardingCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const accessAndOnboarding = bcdc?.accessAndOnboarding;
   const environments = accessAndOnboarding?.environments ?? [];
 
   return (
@@ -81,7 +83,8 @@ export const AccessAndOnboardingCard = ({ spec }: Props) => {
                 key={`${environment.name}-${index}`}
                 style={{
                   paddingLeft: index === 0 ? 0 : undefined,
-                  paddingRight: index === environments.length - 1 ? 0 : undefined,
+                  paddingRight:
+                    index === environments.length - 1 ? 0 : undefined,
                 }}
               >
                 <EnvironmentBox
@@ -99,58 +102,58 @@ export const AccessAndOnboardingCard = ({ spec }: Props) => {
         </Grid>
 
         <div style={{ marginTop: 24 }}>
-        <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" gutterBottom>
             Scope and Access Model
-        </Typography>
+          </Typography>
 
-        {accessAndOnboarding?.scopeAndAccessModelDescription ? (
+          {accessAndOnboarding?.scopeAndAccessModelDescription ? (
             <MarkdownContent
-            content={accessAndOnboarding.scopeAndAccessModelDescription}
+              content={accessAndOnboarding.scopeAndAccessModelDescription}
             />
-        ) : (
+          ) : (
             <>
-            <Typography variant="body2" paragraph>
+              <Typography variant="body2" paragraph>
                 Access is governed through scopes enforced at the API gateway.
-            </Typography>
+              </Typography>
 
-            <Typography variant="body2">
+              <Typography variant="body2">
                 <strong>Example scope:</strong>
-            </Typography>
+              </Typography>
 
-            <div
+              <div
                 style={{
-                border: '1px solid #e0e0e0',
-                backgroundColor: '#f5f5f5',
-                borderRadius: 4,
-                padding: 12,
-                marginTop: 8,
-                marginBottom: 16,
+                  border: '1px solid #e0e0e0',
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 4,
+                  padding: 12,
+                  marginTop: 8,
+                  marginBottom: 16,
                 }}
-            >
+              >
                 <Typography variant="body2">
-                <strong>residency.verify</strong> Allows verification of residency
-                status for eligibility determination.
+                  <strong>residency.verify</strong> Allows verification of
+                  residency status for eligibility determination.
                 </Typography>
-            </div>
+              </div>
 
-            <Typography variant="body2" paragraph>
+              <Typography variant="body2" paragraph>
                 <strong>Scopes define:</strong>
-            </Typography>
+              </Typography>
 
-            <ul style={{ marginTop: 0 }}>
+              <ul style={{ marginTop: 0 }}>
                 <li>
-                <Typography variant="body2">
+                  <Typography variant="body2">
                     What operations the consumer application may perform
-                </Typography>
+                  </Typography>
                 </li>
                 <li>
-                <Typography variant="body2">
+                  <Typography variant="body2">
                     Which environments may be accessed
-                </Typography>
+                  </Typography>
                 </li>
-            </ul>
+              </ul>
             </>
-        )}
+          )}
         </div>
       </CardContent>
     </Card>

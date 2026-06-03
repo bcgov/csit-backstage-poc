@@ -3,7 +3,7 @@ import { EntityRefLink } from '@backstage/plugin-catalog-react';
 import type { OpenApiEntity } from '@bcgov/plugin-catalog-common-bc-data-catalogue';
 
 type Props = {
-  spec: OpenApiEntity['spec'];
+  entity: OpenApiEntity;
 };
 
 const renderValue = (value?: string) =>
@@ -37,8 +37,10 @@ const DetailRow = ({ label, children, shaded }: DetailRowProps) => {
   );
 };
 
-export const DataSourceCard = ({ spec }: Props) => {
-  const dataSource = spec.dataSource;
+export const DataSourceCard = ({ entity }: Props) => {
+  const bcdc = entity.metadata.customMetadata;
+
+  const dataSource = bcdc?.dataSource;
 
   return (
     <Card>
@@ -58,9 +60,7 @@ export const DataSourceCard = ({ spec }: Props) => {
             {renderValue(dataSource?.apiUses)}
           </DetailRow>
 
-          <DetailRow label="Type">
-            {renderValue(dataSource?.type)}
-          </DetailRow>
+          <DetailRow label="Type">{renderValue(dataSource?.type)}</DetailRow>
 
           <DetailRow label="Authoritative for" shaded>
             {renderValue(dataSource?.authoritativeFor)}
